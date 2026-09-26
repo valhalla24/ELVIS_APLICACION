@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="co.edu.usc.elvis.controller.PrincipalController"
+            styleClass="fondo-app">
+    <top>
+        <HBox styleClass="barra-navegacion" spacing="12" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+            <Text text="🛡" styleClass="icono-logo"/>
+            <Text text="SERVIDOR ELVIS" styleClass="titulo-logo"/>
+            <HBox HBox.hgrow="ALWAYS"/>
+            <Button fx:id="botonInicio" text="Inicio" onAction="#mostrarInicio"
+                    styleClass="boton-nav, boton-nav-activo"/>
+            <Button fx:id="botonCuentas" text="Administrar Cuentas" onAction="#mostrarAdministrarCuentas"
+                    styleClass="boton-nav"/>
+            <Button fx:id="botonCalendario" text="Calendario" onAction="#mostrarCalendario"
+                    styleClass="boton-nav"/>
+        </HBox>
+    </top>
+    <center>
+        <StackPane fx:id="contenedorVistas" styleClass="contenedor-vistas"/>
+    </center>
+</BorderPane>

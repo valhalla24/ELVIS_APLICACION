@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.VBox?>
+
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="co.edu.usc.elvis.controller.CalendarioController"
+            fitToWidth="false" styleClass="vista-calendario">
+    <content>
+        <VBox spacing="16">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
+
+            <Label fx:id="etiquetaAlerta" wrapText="true" maxWidth="700" styleClass="alerta-cupo"
+                   managed="false" visible="false"/>
+            <Label fx:id="etiquetaPicoOcupacion" styleClass="resumen-estado"/>
+
+            <GridPane fx:id="grillaCalendario" hgap="4" vgap="4"/>
+        </VBox>
+    </content>
+</ScrollPane>

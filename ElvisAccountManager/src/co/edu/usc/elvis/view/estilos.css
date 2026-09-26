@@ -1,0 +1,255 @@
+.fondo-app {
+    -fx-background-color: #eef1f8;
+    -fx-font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.barra-navegacion {
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent transparent #e2e5ec transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.icono-logo { -fx-font-size: 20px; }
+
+.titulo-logo {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-fill: #1c2b4a;
+}
+
+.boton-nav {
+    -fx-background-color: transparent;
+    -fx-text-fill: #5a6577;
+    -fx-font-size: 13px;
+    -fx-padding: 8 16 8 16;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+}
+
+.boton-nav:hover { -fx-background-color: #eef1f8; }
+
+.boton-nav-activo {
+    -fx-background-color: #16233f;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+}
+
+.vista-inicio { -fx-background-color: #eef1f8; }
+
+.icono-grande { -fx-font-size: 40px; }
+
+.titulo-principal {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-fill: #c0392b;
+}
+
+.subtitulo-rojo {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-fill: #c0392b;
+}
+
+.titulo-secundario {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-fill: #1c2b4a;
+}
+
+.texto-descripcion {
+    -fx-font-size: 12px;
+    -fx-text-fill: #5a6577;
+}
+
+.aviso-info {
+    -fx-font-size: 12px;
+    -fx-text-fill: #8a6d1a;
+    -fx-background-color: #fff6dd;
+    -fx-padding: 10 16 10 16;
+    -fx-background-radius: 8;
+    -fx-border-color: #f0dfa0;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+.tarjeta-estadistica {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-padding: 16 22 16 22;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);
+    -fx-min-width: 150;
+}
+
+.etiqueta-estadistica {
+    -fx-font-size: 10px;
+    -fx-text-fill: #8a93a3;
+    -fx-font-weight: bold;
+}
+
+.valor-estadistica {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2b4a;
+}
+
+.valor-estadistica-pequeno {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2b4a;
+}
+
+.barra-ocupacion { -fx-accent: #16233f; }
+
+.pie-pagina {
+    -fx-background-color: white;
+    -fx-border-color: #e2e5ec transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+.texto-pie {
+    -fx-font-size: 10px;
+    -fx-text-fill: #8a93a3;
+}
+
+.vista-placeholder { -fx-background-color: #eef1f8; }
+
+.texto-placeholder {
+    -fx-font-size: 16px;
+    -fx-text-fill: #8a93a3;
+}
+.boton-secundario {
+    -fx-background-color: white;
+    -fx-text-fill: #16233f;
+    -fx-font-weight: bold;
+    -fx-padding: 10 20 10 20;
+    -fx-background-radius: 6;
+    -fx-border-color: #16233f;
+    -fx-border-radius: 6;
+    -fx-border-width: 1.5;
+    -fx-cursor: hand;
+}
+
+.boton-secundario:hover {
+    -fx-background-color: #eef1f8;
+}
+.resumen-estado {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2b4a;
+    -fx-background-color: #eef3fb;
+    -fx-padding: 10 14 10 14;
+    -fx-background-radius: 8;
+    -fx-border-color: #cfe0f5;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+.panel-colapsable {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);
+}
+
+.panel-colapsable > .title {
+    -fx-background-color: white;
+    -fx-background-radius: 10 10 0 0;
+    -fx-padding: 14 20 14 20;
+}
+
+.panel-colapsable:expanded > .title {
+    -fx-background-radius: 10 10 0 0;
+    -fx-border-color: transparent transparent #eef1f8 transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.panel-colapsable > .title > .text {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-fill: #1c2b4a;
+}
+
+.panel-colapsable > *.content {
+    -fx-background-color: white;
+    -fx-padding: 0 20 20 20;
+    -fx-background-radius: 0 0 10 10;
+    -fx-border-width: 0;
+}
+
+.boton-tabla {
+    -fx-font-size: 10px;
+    -fx-padding: 4 8 4 8;
+    -fx-background-color: #eef1f8;
+    -fx-text-fill: #16233f;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+
+.boton-tabla-peligro {
+    -fx-font-size: 10px;
+    -fx-padding: 4 8 4 8;
+    -fx-background-color: #fbe9e7;
+    -fx-text-fill: #c0392b;
+    -fx-background-radius: 4;
+    -fx-cursor: hand;
+}
+.vista-calendario {
+    -fx-background-color: #eef1f8;
+}
+
+.calendario-encabezado {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1c2b4a;
+    -fx-padding: 6 10 6 10;
+    -fx-background-color: white;
+    -fx-min-width: 130;
+    -fx-alignment: center;
+}
+
+.calendario-hora {
+    -fx-font-size: 10px;
+    -fx-text-fill: #5a6577;
+    -fx-padding: 6 8 6 8;
+    -fx-background-color: white;
+    -fx-min-width: 70;
+    -fx-alignment: center-right;
+}
+
+.calendario-celda {
+    -fx-min-width: 130;
+    -fx-min-height: 40;
+    -fx-padding: 4;
+    -fx-background-color: white;
+    -fx-border-color: #e2e5ec;
+    -fx-border-width: 1;
+}
+
+.celda-normal {
+    -fx-background-color: #e8f7ee;
+}
+
+.celda-moderada {
+    -fx-background-color: #fff6dd;
+}
+
+.celda-alta {
+    -fx-background-color: #fbe4e1;
+    -fx-border-color: #c0392b;
+    -fx-border-width: 1.5;
+}
+
+.calendario-curso {
+    -fx-font-size: 9px;
+    -fx-text-fill: #1c2b4a;
+}
+
+.alerta-cupo {
+    -fx-background-color: #fbe4e1;
+    -fx-text-fill: #c0392b;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-padding: 12 16 12 16;
+    -fx-background-radius: 8;
+    -fx-border-color: #c0392b;
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}

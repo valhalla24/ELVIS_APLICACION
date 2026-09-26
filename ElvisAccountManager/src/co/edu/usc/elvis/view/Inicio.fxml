@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="co.edu.usc.elvis.controller.InicioController"
+            styleClass="vista-inicio">
+    <center>
+        <VBox alignment="CENTER" spacing="14">
+            <padding>
+                <Insets top="40" bottom="40"/>
+            </padding>
+            <Text text="🛡" styleClass="icono-grande"/>
+            <Text text="SERVIDOR ELVIS" styleClass="titulo-principal"/>
+            <Text text="UNIVERSIDAD SANTIAGO DE CALI • DTSI" styleClass="subtitulo-rojo"/>
+            <Text text="Sistema de Asignación y Administración de Cuentas" styleClass="titulo-secundario"/>
+            <Label text="Servidor Elvis USC • Sistema de Asignación y Gestión de Licencias para Cursos de la Facultad de Ingeniería."
+                   styleClass="texto-descripcion" wrapText="true" maxWidth="520"
+                   alignment="CENTER" textAlignment="CENTER"/>
+            <Label text="Seleccione una opción en la barra superior para comenzar: Administrar Cuentas o Calendario"
+                   styleClass="aviso-info" wrapText="true" maxWidth="520" textAlignment="CENTER"/>
+
+            <HBox spacing="18" alignment="CENTER">
+                <padding>
+                    <Insets top="20"/>
+                </padding>
+                <VBox styleClass="tarjeta-estadistica" alignment="CENTER" spacing="4">
+                    <Label text="CAPACIDAD TOTAL" styleClass="etiqueta-estadistica"/>
+                    <Label fx:id="etiquetaCapacidadTotal" text="0 Licencias" styleClass="valor-estadistica"/>
+                </VBox>
+                <VBox styleClass="tarjeta-estadistica" alignment="CENTER" spacing="4">
+                    <Label text="LICENCIAS ASIGNADAS" styleClass="etiqueta-estadistica"/>
+                    <Label fx:id="etiquetaLicenciasAsignadas" text="0 Activas" styleClass="valor-estadistica"/>
+                </VBox>
+                <VBox styleClass="tarjeta-estadistica" alignment="CENTER" spacing="4">
+                    <Label text="LICENCIAS DISPONIBLES" styleClass="etiqueta-estadistica"/>
+                    <Label fx:id="etiquetaLicenciasDisponibles" text="0 Libres" styleClass="valor-estadistica"/>
+                </VBox>
+                <VBox styleClass="tarjeta-estadistica" alignment="CENTER" spacing="4">
+                    <Label text="PERSONAS REGISTRADAS" styleClass="etiqueta-estadistica"/>
+                    <Label fx:id="etiquetaPersonasRegistradas" text="0" styleClass="valor-estadistica"/>
+                </VBox>
+            </HBox>
+        </VBox>
+    </center>
+    <bottom>
+        <VBox alignment="CENTER" styleClass="pie-pagina">
+            <padding>
+                <Insets top="10" bottom="10"/>
+            </padding>
+            <Label text="Universidad Santiago de Cali • Dirección de Tecnologías y Servicios de Información"
+                   styleClass="texto-pie"/>
+        </VBox>
+    </bottom>
+</BorderPane>
