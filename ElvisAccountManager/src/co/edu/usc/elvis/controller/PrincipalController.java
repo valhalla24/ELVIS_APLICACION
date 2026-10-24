@@ -1,11 +1,16 @@
 package co.edu.usc.elvis.controller;
 
+import co.edu.usc.elvis.model.Usuario;
+import co.edu.usc.elvis.util.SesionActual;
 import java.io.IOException;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 
 public class PrincipalController {
 
@@ -13,9 +18,22 @@ public class PrincipalController {
     @FXML private Button botonInicio;
     @FXML private Button botonCuentas;
     @FXML private Button botonCalendario;
+    @FXML private Button botonReportes;
+    @FXML private Button botonUsuarios;
+    @FXML private Label etiquetaUsuarioActual;
 
     @FXML
     public void initialize() {
+        Usuario usuario = SesionActual.obtenerUsuario();
+        if (usuario != null) {
+            String rolLegible = usuario.esAdministrador() ? "Administrador" : "Profesor";
+            etiquetaUsuarioActual.setText(usuario.getNombreCompleto() + " (" + rolLegible + ")");
+        }
+
+        boolean esAdmin = SesionActual.esAdministrador();
+        botonUsuarios.setVisible(esAdmin);
+        botonUsuarios.setManaged(esAdmin);
+
         mostrarInicio();
     }
 
@@ -37,6 +55,35 @@ public class PrincipalController {
         marcarActivo(botonCalendario);
     }
 
+    @FXML
+    private void mostrarReportes() {
+        cargarVista("/co/edu/usc/elvis/view/Reportes.fxml");
+        marcarActivo(botonReportes);
+    }
+
+    @FXML
+    private void mostrarUsuarios() {
+        if (!SesionActual.esAdministrador()) {
+            return;
+        }
+        cargarVista("/co/edu/usc/elvis/view/Usuarios.fxml");
+        marcarActivo(botonUsuarios);
+    }
+
+    @FXML
+    private void cerrarSesion() {
+        SesionActual.cerrarSesion();
+        try {
+            Parent raiz = FXMLLoader.load(getClass().getResource("/co/edu/usc/elvis/view/Login.fxml"));
+            Stage stage = (Stage) contenedorVistas.getScene().getWindow();
+            Scene escena = new Scene(raiz, 1200, 750);
+            escena.getStylesheets().add(getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());
+            stage.setScene(escena);
+        } catch (IOException e) {
+            System.err.println("No se pudo volver al login: " + e.getMessage());
+        }
+    }
+
     private void cargarVista(String rutaFxml) {
         try {
             Parent vista = FXMLLoader.load(getClass().getResource(rutaFxml));
@@ -51,6 +98,8 @@ public class PrincipalController {
         botonInicio.getStyleClass().remove("boton-nav-activo");
         botonCuentas.getStyleClass().remove("boton-nav-activo");
         botonCalendario.getStyleClass().remove("boton-nav-activo");
+        botonReportes.getStyleClass().remove("boton-nav-activo");
+        botonUsuarios.getStyleClass().remove("boton-nav-activo");
         if (!botonActivo.getStyleClass().contains("boton-nav-activo")) {
             botonActivo.getStyleClass().add("boton-nav-activo");
         }

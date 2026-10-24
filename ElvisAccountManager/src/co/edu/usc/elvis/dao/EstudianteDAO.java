@@ -41,6 +41,24 @@ public class EstudianteDAO {
         return false;
     }
 
+    /** Curso en el que esta registrado hoy un estudiante (null si no existe o no tiene curso). */
+    public Integer obtenerCursoIdPorCodigo(String codigo) {
+        String sql = "SELECT curso_id FROM estudiante WHERE codigo_estudiantil = ?";
+        try (Connection conn = ConexionBD.obtenerConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, codigo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int cursoId = rs.getInt("curso_id");
+                    return rs.wasNull() ? null : cursoId;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al consultar el curso del estudiante: " + e.getMessage());
+        }
+        return null;
+    }
+
     public void insertarEstudiante(Estudiante estudiante) throws SQLException {
         String sql = "INSERT INTO estudiante (nombre_completo, codigo_estudiantil, correo_institucional, curso_id) "
                 + "VALUES (?, ?, ?, ?)";

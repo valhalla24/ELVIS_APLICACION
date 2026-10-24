@@ -13,7 +13,7 @@ public class App extends Application {
     public void start(Stage stagePrincipal) throws Exception {
         ConexionBD.inicializarBaseDeDatos();
 
-        Parent raiz = FXMLLoader.load(getClass().getResource("/co/edu/usc/elvis/view/Principal.fxml"));
+        Parent raiz = FXMLLoader.load(getClass().getResource("/co/edu/usc/elvis/view/Login.fxml"));
         Scene escena = new Scene(raiz, 1200, 750);
         escena.getStylesheets().add(
                 getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());

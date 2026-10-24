@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -16,7 +17,7 @@
             <padding>
                 <Insets top="12" right="24" bottom="12" left="24"/>
             </padding>
-            <Text text="🛡" styleClass="icono-logo"/>
+            <Text text="&#128737;" styleClass="icono-logo"/>
             <Text text="SERVIDOR ELVIS" styleClass="titulo-logo"/>
             <HBox HBox.hgrow="ALWAYS"/>
             <Button fx:id="botonInicio" text="Inicio" onAction="#mostrarInicio"
@@ -25,6 +26,12 @@
                     styleClass="boton-nav"/>
             <Button fx:id="botonCalendario" text="Calendario" onAction="#mostrarCalendario"
                     styleClass="boton-nav"/>
+            <Button fx:id="botonReportes" text="Reportes" onAction="#mostrarReportes"
+                    styleClass="boton-nav"/>
+            <Button fx:id="botonUsuarios" text="Usuarios" onAction="#mostrarUsuarios"
+                    styleClass="boton-nav"/>
+            <Label fx:id="etiquetaUsuarioActual" styleClass="texto-usuario-actual"/>
+            <Button text="Cerrar Sesión" onAction="#cerrarSesion" styleClass="boton-tabla-peligro"/>
         </HBox>
     </top>
     <center>

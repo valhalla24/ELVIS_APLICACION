@@ -17,6 +17,7 @@ public class AsignacionDetalle {
     private String horaInicio;
     private String horaFin;
     private boolean notificado;
+    private String fechaAsignacion;
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -48,6 +49,8 @@ public class AsignacionDetalle {
     public void setHoraFin(String horaFin) { this.horaFin = horaFin; }
     public boolean isNotificado() { return notificado; }
     public void setNotificado(boolean notificado) { this.notificado = notificado; }
+    public String getFechaAsignacion() { return fechaAsignacion; }
+    public void setFechaAsignacion(String fechaAsignacion) { this.fechaAsignacion = fechaAsignacion; }
 
     public String getEstadoEnvio() {
         return notificado ? "Enviado" : "Pendiente";

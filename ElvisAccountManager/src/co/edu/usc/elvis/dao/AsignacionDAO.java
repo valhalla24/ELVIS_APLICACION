@@ -50,6 +50,7 @@ public class AsignacionDAO {
 
     private static final String SQL_DETALLE_BASE =
             "SELECT a.id, a.licencia_id, a.curso_id, a.estudiante_id, a.dia_franja, a.hora_inicio, a.hora_fin, a.notificado, "
+            + "datetime(a.fecha_asignacion, 'localtime') AS fecha_asignacion, "
             + "l.usuario AS licencia_usuario, l.contrasena AS licencia_contrasena, l.ip_asignada AS licencia_ip, "
             + "c.nombre_materia AS curso_nombre, c.codigo_curso AS curso_codigo, "
             + "e.nombre_completo AS estudiante_nombre, e.correo_institucional AS estudiante_correo "
@@ -58,33 +59,40 @@ public class AsignacionDAO {
             + "JOIN curso c ON c.id = a.curso_id "
             + "LEFT JOIN estudiante e ON e.id = a.estudiante_id ";
 
+    /** Todas las asignaciones (lo que ve el administrador). */
     public List<AsignacionDetalle> obtenerTodasConDetalle() {
-        List<AsignacionDetalle> lista = new ArrayList<>();
-        String sql = SQL_DETALLE_BASE + "ORDER BY a.dia_franja, a.hora_inicio";
-        try (Connection conn = ConexionBD.obtenerConexion();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                lista.add(mapearDetalle(rs));
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al listar asignaciones con detalle: " + e.getMessage());
-        }
-        return lista;
+        return consultarDetalle("ORDER BY a.dia_franja, a.hora_inicio", null);
+    }
+
+    /** Solo las asignaciones de los cursos que administra un usuario (lo que ve un profesor). */
+    public List<AsignacionDetalle> obtenerConDetallePorDueno(int usuarioId) {
+        return consultarDetalle("WHERE c.usuario_id = ? ORDER BY a.dia_franja, a.hora_inicio", usuarioId);
     }
 
     public List<AsignacionDetalle> obtenerPendientesDeNotificar() {
+        return consultarDetalle("WHERE a.notificado = 0 AND a.estudiante_id IS NOT NULL "
+                + "ORDER BY a.dia_franja, a.hora_inicio", null);
+    }
+
+    public List<AsignacionDetalle> obtenerPendientesDeNotificarPorDueno(int usuarioId) {
+        return consultarDetalle("WHERE a.notificado = 0 AND a.estudiante_id IS NOT NULL AND c.usuario_id = ? "
+                + "ORDER BY a.dia_franja, a.hora_inicio", usuarioId);
+    }
+
+    private List<AsignacionDetalle> consultarDetalle(String sufijoSql, Integer parametro) {
         List<AsignacionDetalle> lista = new ArrayList<>();
-        String sql = SQL_DETALLE_BASE + "WHERE a.notificado = 0 AND a.estudiante_id IS NOT NULL "
-                + "ORDER BY a.dia_franja, a.hora_inicio";
         try (Connection conn = ConexionBD.obtenerConexion();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                lista.add(mapearDetalle(rs));
+             PreparedStatement ps = conn.prepareStatement(SQL_DETALLE_BASE + sufijoSql)) {
+            if (parametro != null) {
+                ps.setInt(1, parametro);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapearDetalle(rs));
+                }
             }
         } catch (SQLException e) {
-            System.err.println("Error al listar pendientes de notificar: " + e.getMessage());
+            System.err.println("Error al listar asignaciones con detalle: " + e.getMessage());
         }
         return lista;
     }
@@ -175,6 +183,7 @@ public class AsignacionDAO {
         d.setCursoCodigo(rs.getString("curso_codigo"));
         d.setEstudianteNombre(rs.getString("estudiante_nombre"));
         d.setEstudianteCorreo(rs.getString("estudiante_correo"));
+        d.setFechaAsignacion(rs.getString("fecha_asignacion"));
         return d;
     }
 }

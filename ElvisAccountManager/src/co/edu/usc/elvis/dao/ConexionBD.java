@@ -1,13 +1,17 @@
 package co.edu.usc.elvis.dao;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
 public class ConexionBD {
 
-    private static final String URL_BD = "jdbc:sqlite:elvis.db";
+    private static final String CARPETA_BD = "C:/Users/Public/ElvisAccountManager";
+    private static final String URL_BD = "jdbc:sqlite:" + CARPETA_BD + "/elvis.db";
 
     private static Connection conexion;
 
@@ -16,9 +20,11 @@ public class ConexionBD {
 
     public static Connection obtenerConexion() throws SQLException {
         if (conexion == null || conexion.isClosed()) {
+            new File(CARPETA_BD).mkdirs();
             conexion = DriverManager.getConnection(URL_BD);
             try (Statement stmt = conexion.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON;");
+                stmt.execute("PRAGMA journal_mode = WAL;");
             }
         }
         return conexion;
@@ -35,6 +41,7 @@ public class ConexionBD {
                 + "hora_inicio TEXT NOT NULL,"
                 + "hora_fin TEXT NOT NULL,"
                 + "licencias_requeridas INTEGER NOT NULL,"
+                + "usuario_id INTEGER,"
                 + "fecha_registro TEXT NOT NULL DEFAULT (datetime('now'))"
                 + ");";
 
@@ -57,7 +64,7 @@ public class ConexionBD {
                 + "vigencia_hasta TEXT"
                 + ");";
 
-                String sqlAsignacion = "CREATE TABLE IF NOT EXISTS asignacion ("
+        String sqlAsignacion = "CREATE TABLE IF NOT EXISTS asignacion ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "licencia_id INTEGER NOT NULL,"
                 + "curso_id INTEGER NOT NULL,"
@@ -80,6 +87,16 @@ public class ConexionBD {
                 + "fecha_hora TEXT NOT NULL DEFAULT (datetime('now'))"
                 + ");";
 
+        String sqlUsuarioSistema = "CREATE TABLE IF NOT EXISTS usuario_sistema ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "nombre_completo TEXT NOT NULL,"
+                + "nombre_usuario TEXT NOT NULL UNIQUE,"
+                + "contrasena_hash TEXT NOT NULL,"
+                + "sal TEXT NOT NULL,"
+                + "rol TEXT NOT NULL DEFAULT 'PROFESOR',"
+                + "fecha_creacion TEXT NOT NULL DEFAULT (datetime('now'))"
+                + ");";
+
         try (Connection conn = obtenerConexion();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sqlCurso);
@@ -87,9 +104,72 @@ public class ConexionBD {
             stmt.execute(sqlLicencia);
             stmt.execute(sqlAsignacion);
             stmt.execute(sqlLog);
+            stmt.execute(sqlUsuarioSistema);
             System.out.println("Base de datos inicializada correctamente.");
         } catch (SQLException e) {
             System.err.println("Error al inicializar la base de datos: " + e.getMessage());
+        }
+
+        asegurarColumnaDuenoEnCurso();
+        sembrarUsuarioAdminSiEstaVacio();
+    }
+
+    /**
+     * Las bases de datos creadas antes de existir el "dueño de curso" no
+     * tienen la columna usuario_id en la tabla curso. Se agrega sola, sin
+     * borrar nada: esos cursos quedan "sin dueño" hasta que el administrador
+     * los asigne a alguien.
+     */
+    private static void asegurarColumnaDuenoEnCurso() {
+        boolean existe = false;
+        try (Connection conn = obtenerConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(curso)")) {
+            while (rs.next()) {
+                if ("usuario_id".equalsIgnoreCase(rs.getString("name"))) {
+                    existe = true;
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al revisar la tabla curso: " + e.getMessage());
+            return;
+        }
+
+        if (!existe) {
+            try (Connection conn = obtenerConexion();
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE curso ADD COLUMN usuario_id INTEGER");
+                System.out.println("Se agregó la columna usuario_id (dueño del curso) a la tabla curso.");
+            } catch (SQLException e) {
+                System.err.println("Error al agregar la columna usuario_id: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void sembrarUsuarioAdminSiEstaVacio() {
+        String sqlConteo = "SELECT COUNT(*) AS total FROM usuario_sistema";
+        try (Connection conn = obtenerConexion();
+             Statement stmtConteo = conn.createStatement();
+             ResultSet rs = stmtConteo.executeQuery(sqlConteo)) {
+
+            int total = rs.next() ? rs.getInt("total") : 0;
+            if (total == 0) {
+                String sal = co.edu.usc.elvis.util.SeguridadUtil.generarSal();
+                String hash = co.edu.usc.elvis.util.SeguridadUtil.hashContrasena("admin123", sal);
+                String sqlInsertar = "INSERT INTO usuario_sistema "
+                        + "(nombre_completo, nombre_usuario, contrasena_hash, sal, rol) "
+                        + "VALUES (?, ?, ?, ?, 'ADMINISTRADOR')";
+                try (PreparedStatement ps = conn.prepareStatement(sqlInsertar)) {
+                    ps.setString(1, "Administrador del Sistema");
+                    ps.setString(2, "admin");
+                    ps.setString(3, hash);
+                    ps.setString(4, sal);
+                    ps.executeUpdate();
+                }
+                System.out.println("Usuario administrador inicial creado -> usuario: admin / contraseña: admin123 (cámbiala cuanto antes)");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al sembrar usuario administrador inicial: " + e.getMessage());
         }
     }
 }

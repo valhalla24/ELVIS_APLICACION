@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
+
+<ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="co.edu.usc.elvis.controller.ReportesController"
+            fitToWidth="true" styleClass="vista-administrar">
+    <content>
+        <VBox spacing="20" alignment="TOP_CENTER">
+            <padding>
+                <Insets top="24" right="24" bottom="24" left="24"/>
+            </padding>
+
+            <VBox styleClass="tarjeta-panel" spacing="10" maxWidth="960">
+                <Text text="Generar Reporte" styleClass="titulo-panel"/>
+
+                <Label text="Tipo de reporte" styleClass="etiqueta-campo"/>
+                <ComboBox fx:id="comboTipoReporte" maxWidth="Infinity"/>
+
+                <Label text="Dependencia solicitante (aparece en el encabezado del reporte)" styleClass="etiqueta-campo"/>
+                <TextField fx:id="campoDependencia"/>
+
+                <Label text="Rango de fechas (opcional)" styleClass="etiqueta-campo"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="Desde"/>
+                    <DatePicker fx:id="fechaDesde" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                    <Label text="Hasta"/>
+                    <DatePicker fx:id="fechaHasta" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </HBox>
+                <Label fx:id="etiquetaAyudaRango" wrapText="true" styleClass="texto-descripcion"/>
+
+                <Button fx:id="botonGenerar" text="Generar vista previa" onAction="#generarVistaPrevia"
+                        styleClass="boton-primario" maxWidth="Infinity"/>
+                <HBox spacing="10">
+                    <Button fx:id="botonExportarPdf" text="Exportar a PDF" onAction="#exportarPdf"
+                            styleClass="boton-secundario" HBox.hgrow="ALWAYS" maxWidth="Infinity" disable="true"/>
+                    <Button fx:id="botonExportarExcel" text="Exportar a Excel (.xlsx)" onAction="#exportarExcel"
+                            styleClass="boton-secundario" HBox.hgrow="ALWAYS" maxWidth="Infinity" disable="true"/>
+                </HBox>
+                <Label fx:id="etiquetaResultado" wrapText="true" styleClass="etiqueta-mensaje"/>
+            </VBox>
+
+            <VBox styleClass="tarjeta-panel" spacing="10" maxWidth="960">
+                <Text text="Vista previa" styleClass="titulo-panel"/>
+                <Label fx:id="etiquetaTituloVista" styleClass="etiqueta-campo"/>
+                <Label fx:id="etiquetaResumen" wrapText="true" styleClass="resumen-estado"/>
+                <TableView fx:id="tablaVista" prefHeight="380"/>
+            </VBox>
+        </VBox>
+    </content>
+</ScrollPane>

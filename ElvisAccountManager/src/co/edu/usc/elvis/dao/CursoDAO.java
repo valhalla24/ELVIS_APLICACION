@@ -6,15 +6,22 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CursoDAO {
 
+    private static final String SQL_SELECT_CURSO =
+            "SELECT c.id, c.nombre_materia, c.codigo_curso, c.semestre_lectivo, c.docente_responsable, "
+            + "c.dia_clase, c.hora_inicio, c.hora_fin, c.licencias_requeridas, c.usuario_id, "
+            + "u.nombre_completo AS dueno_nombre "
+            + "FROM curso c LEFT JOIN usuario_sistema u ON u.id = c.usuario_id ";
+
     public boolean registrarCurso(Curso curso) throws SQLException {
         String sql = "INSERT INTO curso (nombre_materia, codigo_curso, semestre_lectivo, "
-                + "docente_responsable, dia_clase, hora_inicio, hora_fin, licencias_requeridas) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                + "docente_responsable, dia_clase, hora_inicio, hora_fin, licencias_requeridas, usuario_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -26,6 +33,7 @@ public class CursoDAO {
             ps.setString(6, curso.getHoraInicio());
             ps.setString(7, curso.getHoraFin());
             ps.setInt(8, curso.getLicenciasRequeridas());
+            asignarDueno(ps, 9, curso.getUsuarioId());
             ps.executeUpdate();
 
             try (Statement stmtId = conn.createStatement();
@@ -54,32 +62,6 @@ public class CursoDAO {
         return false;
     }
 
-    public List<Curso> obtenerTodos() {
-        List<Curso> cursos = new ArrayList<>();
-        String sql = "SELECT id, nombre_materia, codigo_curso, semestre_lectivo, docente_responsable, "
-                + "dia_clase, hora_inicio, hora_fin, licencias_requeridas FROM curso ORDER BY nombre_materia";
-        try (Connection conn = ConexionBD.obtenerConexion();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                Curso curso = new Curso();
-                curso.setId(rs.getInt("id"));
-                curso.setNombreMateria(rs.getString("nombre_materia"));
-                curso.setCodigoCurso(rs.getString("codigo_curso"));
-                curso.setSemestreLectivo(rs.getString("semestre_lectivo"));
-                curso.setDocenteResponsable(rs.getString("docente_responsable"));
-                curso.setDiaClase(rs.getString("dia_clase"));
-                curso.setHoraInicio(rs.getString("hora_inicio"));
-                curso.setHoraFin(rs.getString("hora_fin"));
-                curso.setLicenciasRequeridas(rs.getInt("licencias_requeridas"));
-                cursos.add(curso);
-            }
-        } catch (SQLException e) {
-            System.err.println("Error al listar cursos: " + e.getMessage());
-        }
-        return cursos;
-    }
-
     public boolean existeCodigoCursoExcluyendo(String codigoCurso, int idExcluir) {
         String sql = "SELECT COUNT(*) AS total FROM curso WHERE codigo_curso = ? AND id != ?";
         try (Connection conn = ConexionBD.obtenerConexion();
@@ -97,10 +79,41 @@ public class CursoDAO {
         return false;
     }
 
+    /** Todos los cursos (para el administrador y para el calendario). */
+    public List<Curso> obtenerTodos() {
+        return listar(SQL_SELECT_CURSO + "ORDER BY c.nombre_materia", null);
+    }
+
+    /** Solo los cursos que administra un usuario (lo que ve un profesor). */
+    public List<Curso> obtenerPorDueno(int usuarioId) {
+        return listar(SQL_SELECT_CURSO + "WHERE c.usuario_id = ? ORDER BY c.nombre_materia", usuarioId);
+    }
+
+    public Curso obtenerPorId(int id) {
+        List<Curso> resultado = listar(SQL_SELECT_CURSO + "WHERE c.id = ?", id);
+        return resultado.isEmpty() ? null : resultado.get(0);
+    }
+
+    public int contarPorDueno(int usuarioId) {
+        String sql = "SELECT COUNT(*) AS total FROM curso WHERE usuario_id = ?";
+        try (Connection conn = ConexionBD.obtenerConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, usuarioId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al contar cursos del usuario: " + e.getMessage());
+        }
+        return 0;
+    }
+
     public void actualizarCurso(Curso curso) throws SQLException {
         String sql = "UPDATE curso SET nombre_materia = ?, codigo_curso = ?, semestre_lectivo = ?, "
-                + "docente_responsable = ?, dia_clase = ?, hora_inicio = ?, hora_fin = ?, licencias_requeridas = ? "
-                + "WHERE id = ?";
+                + "docente_responsable = ?, dia_clase = ?, hora_inicio = ?, hora_fin = ?, "
+                + "licencias_requeridas = ?, usuario_id = ? WHERE id = ?";
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, curso.getNombreMateria());
@@ -111,7 +124,8 @@ public class CursoDAO {
             ps.setString(6, curso.getHoraInicio());
             ps.setString(7, curso.getHoraFin());
             ps.setInt(8, curso.getLicenciasRequeridas());
-            ps.setInt(9, curso.getId());
+            asignarDueno(ps, 9, curso.getUsuarioId());
+            ps.setInt(10, curso.getId());
             ps.executeUpdate();
         }
     }
@@ -123,5 +137,48 @@ public class CursoDAO {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
+    }
+
+    private void asignarDueno(PreparedStatement ps, int indice, Integer usuarioId) throws SQLException {
+        if (usuarioId == null) {
+            ps.setNull(indice, Types.INTEGER);
+        } else {
+            ps.setInt(indice, usuarioId);
+        }
+    }
+
+    private List<Curso> listar(String sql, Integer parametro) {
+        List<Curso> cursos = new ArrayList<>();
+        try (Connection conn = ConexionBD.obtenerConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            if (parametro != null) {
+                ps.setInt(1, parametro);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    cursos.add(mapear(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al listar cursos: " + e.getMessage());
+        }
+        return cursos;
+    }
+
+    private Curso mapear(ResultSet rs) throws SQLException {
+        Curso curso = new Curso();
+        curso.setId(rs.getInt("id"));
+        curso.setNombreMateria(rs.getString("nombre_materia"));
+        curso.setCodigoCurso(rs.getString("codigo_curso"));
+        curso.setSemestreLectivo(rs.getString("semestre_lectivo"));
+        curso.setDocenteResponsable(rs.getString("docente_responsable"));
+        curso.setDiaClase(rs.getString("dia_clase"));
+        curso.setHoraInicio(rs.getString("hora_inicio"));
+        curso.setHoraFin(rs.getString("hora_fin"));
+        curso.setLicenciasRequeridas(rs.getInt("licencias_requeridas"));
+        int duenoId = rs.getInt("usuario_id");
+        curso.setUsuarioId(rs.wasNull() ? null : duenoId);
+        curso.setDuenoNombre(rs.getString("dueno_nombre"));
+        return curso;
     }
 }

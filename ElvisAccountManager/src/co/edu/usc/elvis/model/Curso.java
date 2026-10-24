@@ -11,6 +11,8 @@ public class Curso {
     private String horaInicio;
     private String horaFin;
     private int licenciasRequeridas;
+    private Integer usuarioId;
+    private String duenoNombre;
 
     public Curso() {
     }
@@ -46,4 +48,14 @@ public class Curso {
     public void setHoraFin(String horaFin) { this.horaFin = horaFin; }
     public int getLicenciasRequeridas() { return licenciasRequeridas; }
     public void setLicenciasRequeridas(int licenciasRequeridas) { this.licenciasRequeridas = licenciasRequeridas; }
+
+    /** Id del usuario del sistema que administra este curso (null = sin dueño). */
+    public Integer getUsuarioId() { return usuarioId; }
+    public void setUsuarioId(Integer usuarioId) { this.usuarioId = usuarioId; }
+    public String getDuenoNombre() { return duenoNombre; }
+    public void setDuenoNombre(String duenoNombre) { this.duenoNombre = duenoNombre; }
+
+    public String getDuenoTexto() {
+        return (duenoNombre == null || duenoNombre.isEmpty()) ? "(sin dueño)" : duenoNombre;
+    }
 }

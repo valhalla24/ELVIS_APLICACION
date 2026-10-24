@@ -57,6 +57,11 @@
                             <Label text="Cantidad de Licencias Requeridas" styleClass="etiqueta-campo"/>
                             <Spinner fx:id="spinnerLicencias" editable="true"/>
 
+                            <Label fx:id="etiquetaDuenoCurso" text="Dueño del curso (usuario que lo administra)"
+                                   styleClass="etiqueta-campo" managed="false" visible="false"/>
+                            <ComboBox fx:id="comboDuenoCurso" promptText="Selecciona un usuario..."
+                                      maxWidth="Infinity" managed="false" visible="false"/>
+
                             <Button fx:id="botonCrearCurso" text="Crear y Registrar Curso" onAction="#registrarCurso"
                                     styleClass="boton-primario" maxWidth="Infinity"/>
                             <Label fx:id="etiquetaEstado" wrapText="true" styleClass="etiqueta-mensaje"/>
@@ -64,10 +69,11 @@
                             <Label text="Cursos Registrados" styleClass="etiqueta-campo"/>
                             <TableView fx:id="tablaCursos" prefHeight="180">
                                 <columns>
-                                    <TableColumn fx:id="colCursoCodigo" text="Código" prefWidth="80"/>
-                                    <TableColumn fx:id="colCursoNombre" text="Materia" prefWidth="150"/>
-                                    <TableColumn fx:id="colCursoDocente" text="Docente" prefWidth="130"/>
-                                    <TableColumn fx:id="colCursoAcciones" text="Acciones" prefWidth="120"/>
+                                    <TableColumn fx:id="colCursoCodigo" text="Código" prefWidth="70"/>
+                                    <TableColumn fx:id="colCursoNombre" text="Materia" prefWidth="115"/>
+                                    <TableColumn fx:id="colCursoDocente" text="Docente" prefWidth="100"/>
+                                    <TableColumn fx:id="colCursoDueno" text="Dueño" prefWidth="95"/>
+                                    <TableColumn fx:id="colCursoAcciones" text="Acciones" prefWidth="110"/>
                                 </columns>
                             </TableView>
                         </VBox>
@@ -124,6 +130,9 @@
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
+                            <Label fx:id="etiquetaAvisoRol" wrapText="true" styleClass="aviso-info"
+                                   text="Solo el administrador puede cargar, modificar o eliminar licencias. Aquí puedes consultarlas."
+                                   managed="false" visible="false"/>
                             <Label fx:id="etiquetaEstadoLicencias" wrapText="true" styleClass="resumen-estado"/>
                             <Label text="Sube un Excel (.xlsx) con las columnas: Usuario | Contraseña | IP. Si el usuario ya existe, se actualiza; si no, se crea."
                                    styleClass="texto-descripcion" wrapText="true"/>

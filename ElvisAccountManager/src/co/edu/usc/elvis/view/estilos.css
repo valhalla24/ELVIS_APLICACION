@@ -253,3 +253,9 @@
     -fx-border-radius: 8;
     -fx-border-width: 1;
 }
+
+.texto-usuario-actual {
+    -fx-font-size: 11px;
+    -fx-text-fill: #5a6577;
+    -fx-padding: 0 6 0 12;
+}

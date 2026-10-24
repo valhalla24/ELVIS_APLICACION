@@ -5,14 +5,18 @@ import co.edu.usc.elvis.dao.CursoDAO;
 import co.edu.usc.elvis.dao.EstudianteDAO;
 import co.edu.usc.elvis.dao.LicenciaDAO;
 import co.edu.usc.elvis.dao.LogAuditoriaDAO;
+import co.edu.usc.elvis.dao.UsuarioDAO;
 import co.edu.usc.elvis.model.Asignacion;
 import co.edu.usc.elvis.model.AsignacionDetalle;
 import co.edu.usc.elvis.model.Curso;
 import co.edu.usc.elvis.model.Estudiante;
 import co.edu.usc.elvis.model.Licencia;
+import co.edu.usc.elvis.model.Usuario;
 import co.edu.usc.elvis.util.EmailService;
+import co.edu.usc.elvis.util.HorarioUtil;
 import co.edu.usc.elvis.util.ImportadorEstudiantesExcel;
 import co.edu.usc.elvis.util.ImportadorLicenciasExcel;
+import co.edu.usc.elvis.util.SesionActual;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -57,15 +61,19 @@ public class AdministrarCuentasController {
     @FXML private ComboBox<String> comboHoraInicio;
     @FXML private ComboBox<String> comboHoraFin;
     @FXML private Spinner<Integer> spinnerLicencias;
+    @FXML private Label etiquetaDuenoCurso;
+    @FXML private ComboBox<Usuario> comboDuenoCurso;
     @FXML private Button botonCrearCurso;
     @FXML private Label etiquetaEstado;
     @FXML private TableView<Curso> tablaCursos;
     @FXML private TableColumn<Curso, String> colCursoCodigo;
     @FXML private TableColumn<Curso, String> colCursoNombre;
     @FXML private TableColumn<Curso, String> colCursoDocente;
+    @FXML private TableColumn<Curso, String> colCursoDueno;
     @FXML private TableColumn<Curso, Void> colCursoAcciones;
 
     @FXML private TitledPane panelCargarLicencias;
+    @FXML private Label etiquetaAvisoRol;
     @FXML private Label etiquetaEstadoLicencias;
     @FXML private Button botonSeleccionarArchivoLicencias;
     @FXML private Button botonCargarLicencias;
@@ -114,6 +122,7 @@ public class AdministrarCuentasController {
     private final EstudianteDAO estudianteDAO = new EstudianteDAO();
     private final LogAuditoriaDAO logAuditoriaDAO = new LogAuditoriaDAO();
     private final AsignacionDAO asignacionDAO = new AsignacionDAO();
+    private final UsuarioDAO usuarioDAO = new UsuarioDAO();
     private final ImportadorLicenciasExcel importadorLicencias = new ImportadorLicenciasExcel();
     private final ImportadorEstudiantesExcel importadorEstudiantes = new ImportadorEstudiantesExcel();
     private final ObservableList<Estudiante> estudiantesPreview = FXCollections.observableArrayList();
@@ -127,12 +136,15 @@ public class AdministrarCuentasController {
     private static final String ACCION_CARGA_LICENCIAS = "carga_licencias";
     private static final String ACCION_CARGA_ESTUDIANTES = "carga_estudiantes";
     private static final String ACCION_ASIGNACION = "asignacion_licencias";
+    private static final String MENSAJE_SOLO_ADMIN = "Esta acción es solo para el administrador.";
+    private static final String MENSAJE_CURSO_AJENO =
+            "Este curso pertenece a otro profesor; solo su dueño o el administrador pueden modificarlo.";
 
     @FXML
     public void initialize() {
         comboDia.getItems().addAll("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado");
 
-        List<String> horas = generarFranjasHorarias();
+        List<String> horas = HorarioUtil.generarFranjasHorarias();
         comboHoraInicio.getItems().addAll(horas);
         comboHoraFin.getItems().addAll(horas);
 
@@ -143,10 +155,109 @@ public class AdministrarCuentasController {
         inicializarTablaCursos();
         inicializarTablaLicencias();
         inicializarPanelAsignacion();
+        inicializarComboDueno();
+        aplicarRestriccionesDeRol();
     }
 
+    /**
+     * El profesor puede hacer casi todo, menos cargar, modificar o eliminar
+     * licencias y reenviar credenciales (esas acciones son del administrador).
+     * Ademas, un profesor solo ve y administra SUS cursos; el administrador
+     * ve todos y puede cambiar el dueño de cualquiera.
+     * Ademas de deshabilitar botones, cada accion vuelve a verificar el
+     * permiso por dentro, por si alguien intenta llegar a ella por otro camino.
+     */
+    private void aplicarRestriccionesDeRol() {
+        boolean esAdmin = SesionActual.esAdministrador();
+
+        colCursoDueno.setVisible(esAdmin);
+        etiquetaDuenoCurso.setVisible(esAdmin);
+        etiquetaDuenoCurso.setManaged(esAdmin);
+        comboDuenoCurso.setVisible(esAdmin);
+        comboDuenoCurso.setManaged(esAdmin);
+
+        if (!esAdmin) {
+            etiquetaAvisoRol.setVisible(true);
+            etiquetaAvisoRol.setManaged(true);
+            botonSeleccionarArchivoLicencias.setDisable(true);
+            botonCargarLicencias.setDisable(true);
+        }
+    }
+
+    private String nombreUsuarioActual() {
+        Usuario actual = SesionActual.obtenerUsuario();
+        return actual == null ? "desconocido" : actual.getNombreUsuario();
+    }
+
+    private int idUsuarioActual() {
+        Usuario actual = SesionActual.obtenerUsuario();
+        return actual == null ? -1 : actual.getId();
+    }
+
+    /** Administrador: todos los cursos. Profesor: solo los suyos. */
+    private List<Curso> cursosVisibles() {
+        return SesionActual.esAdministrador()
+                ? cursoDAO.obtenerTodos()
+                : cursoDAO.obtenerPorDueno(idUsuarioActual());
+    }
+
+    /** El administrador gestiona cualquier curso; el profesor solo los que son suyos. */
+    private boolean puedeGestionar(Curso curso) {
+        if (curso == null) {
+            return false;
+        }
+        if (SesionActual.esAdministrador()) {
+            return true;
+        }
+        return curso.getUsuarioId() != null && curso.getUsuarioId() == idUsuarioActual();
+    }
+
+    private void refrescarCursos() {
+        cargarTablaCursos();
+        List<Curso> visibles = cursosVisibles();
+        comboCursoDestino.getItems().setAll(visibles);
+        comboCursoAsignar.getItems().setAll(visibles);
+    }
+
+    // --------------------------------------------------------------- Dueño del curso
+
+    private void inicializarComboDueno() {
+        comboDuenoCurso.getItems().setAll(usuarioDAO.obtenerTodos());
+        comboDuenoCurso.setConverter(new StringConverter<Usuario>() {
+            @Override
+            public String toString(Usuario usuario) {
+                return usuario == null ? ""
+                        : usuario.getNombreCompleto() + " (" + usuario.getNombreUsuario() + ")";
+            }
+
+            @Override
+            public Usuario fromString(String texto) {
+                return null;
+            }
+        });
+        seleccionarDuenoPorDefecto();
+    }
+
+    private Usuario buscarUsuarioEnCombo(Integer id) {
+        if (id == null) {
+            return null;
+        }
+        for (Usuario u : comboDuenoCurso.getItems()) {
+            if (u.getId() == id) {
+                return u;
+            }
+        }
+        return null;
+    }
+
+    private void seleccionarDuenoPorDefecto() {
+        comboDuenoCurso.setValue(buscarUsuarioEnCombo(idUsuarioActual()));
+    }
+
+    // ---------------------------------------------------------------- Asignacion
+
     private void inicializarPanelAsignacion() {
-        comboCursoAsignar.getItems().setAll(cursoDAO.obtenerTodos());
+        comboCursoAsignar.getItems().setAll(cursosVisibles());
         comboCursoAsignar.setConverter(new StringConverter<Curso>() {
             @Override
             public String toString(Curso curso) {
@@ -193,6 +304,10 @@ public class AdministrarCuentasController {
             mostrarMensaje(etiquetaResultadoAsignacion, "Selecciona un curso primero.", false);
             return;
         }
+        if (!puedeGestionar(curso)) {
+            mostrarMensaje(etiquetaResultadoAsignacion, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
 
         List<Asignacion> existentes = asignacionDAO.obtenerPorCurso(curso.getId());
         if (!existentes.isEmpty()) {
@@ -202,17 +317,19 @@ public class AdministrarCuentasController {
             return;
         }
 
-        List<Estudiante> estudiantesDelCurso = estudianteDAO.obtenerPorCurso(curso.getId());
-        if (estudiantesDelCurso.isEmpty()) {
+        List<Estudiante> estudiantesCurso = estudianteDAO.obtenerPorCurso(curso.getId());
+        if (estudiantesCurso.isEmpty()) {
             mostrarMensaje(etiquetaResultadoAsignacion,
                     "Este curso todavía no tiene estudiantes cargados (usa el panel \"Carga de Listas\").", false);
             return;
         }
 
+        // Las licencias ocupadas se calculan con las asignaciones de TODOS los cursos
+        // (de todos los profesores), para que nunca se crucen dos clases a la misma hora.
         List<Asignacion> asignacionesDelDia = asignacionDAO.obtenerAsignacionesPorDia(curso.getDiaClase());
         Set<Integer> licenciasOcupadas = new HashSet<>();
         for (Asignacion a : asignacionesDelDia) {
-            if (seSuperponen(a.getHoraInicio(), a.getHoraFin(), curso.getHoraInicio(), curso.getHoraFin())) {
+            if (HorarioUtil.seSuperponen(a.getHoraInicio(), a.getHoraFin(), curso.getHoraInicio(), curso.getHoraFin())) {
                 licenciasOcupadas.add(a.getLicenciaId());
             }
         }
@@ -231,28 +348,28 @@ public class AdministrarCuentasController {
             return;
         }
 
-        int aAsignar = Math.min(requeridas, Math.min(disponiblesEnFranja.size(), estudiantesDelCurso.size()));
+        int aAsignar = Math.min(requeridas, Math.min(disponiblesEnFranja.size(), estudiantesCurso.size()));
 
         try {
             for (int i = 0; i < aAsignar; i++) {
                 Licencia l = disponiblesEnFranja.get(i);
-                Estudiante est = estudiantesDelCurso.get(i);
+                Estudiante est = estudiantesCurso.get(i);
                 asignacionDAO.crearAsignacion(l.getId(), curso.getId(), est.getId(), curso.getDiaClase(),
                         curso.getHoraInicio(), curso.getHoraFin());
                 licenciaDAO.recalcularEstado(l.getId(), asignacionDAO.contarAsignacionesPorLicencia(l.getId()));
             }
 
             String mensaje = aAsignar + " licencia(s) asignada(s) a estudiantes del curso \"" + curso.getNombreMateria() + "\".";
-            if (aAsignar < estudiantesDelCurso.size()) {
-                mensaje += " " + (estudiantesDelCurso.size() - aAsignar) + " estudiante(s) se quedaron sin licencia por falta de cupo.";
+            if (aAsignar < estudiantesCurso.size()) {
+                mensaje += " " + (estudiantesCurso.size() - aAsignar) + " estudiante(s) se quedaron sin licencia por falta de cupo.";
             }
             if (aAsignar < requeridas && disponiblesEnFranja.size() < requeridas) {
                 mensaje += " (Solo había " + disponiblesEnFranja.size() + " licencia(s) libres en ese horario, se pedían " + requeridas + ".)";
             }
-            mostrarMensaje(etiquetaResultadoAsignacion, mensaje, aAsignar == Math.min(requeridas, estudiantesDelCurso.size()));
+            mostrarMensaje(etiquetaResultadoAsignacion, mensaje, aAsignar == Math.min(requeridas, estudiantesCurso.size()));
 
             logAuditoriaDAO.registrarEvento(ACCION_ASIGNACION,
-                    aAsignar + " licencias asignadas a estudiantes (curso: " + curso.getCodigoCurso() + ")", "admin");
+                    aAsignar + " licencias asignadas a estudiantes (curso: " + curso.getCodigoCurso() + ")", nombreUsuarioActual());
             cargarTablaAsignaciones();
             cargarTablaLicencias();
             actualizarEstadoLicencias();
@@ -263,7 +380,9 @@ public class AdministrarCuentasController {
     }
 
     private void cargarTablaAsignaciones() {
-        asignacionesVista.setAll(asignacionDAO.obtenerTodasConDetalle());
+        asignacionesVista.setAll(SesionActual.esAdministrador()
+                ? asignacionDAO.obtenerTodasConDetalle()
+                : asignacionDAO.obtenerConDetallePorDueno(idUsuarioActual()));
     }
 
     private TableCell<AsignacionDetalle, Void> crearCeldaAccionesAsignacion() {
@@ -286,7 +405,8 @@ public class AdministrarCuentasController {
                     setGraphic(null);
                 } else {
                     AsignacionDetalle detalle = getTableView().getItems().get(getIndex());
-                    botonReenviar.setDisable(detalle.getEstudianteCorreo() == null || detalle.getEstudianteCorreo().isEmpty());
+                    boolean sinCorreo = detalle.getEstudianteCorreo() == null || detalle.getEstudianteCorreo().isEmpty();
+                    botonReenviar.setDisable(!SesionActual.esAdministrador() || sinCorreo);
                     setGraphic(contenedor);
                 }
             }
@@ -294,6 +414,10 @@ public class AdministrarCuentasController {
     }
 
     private void reenviarNotificacion(AsignacionDetalle detalle) {
+        if (!SesionActual.esAdministrador()) {
+            mostrarMensaje(etiquetaResultadoEnvio, MENSAJE_SOLO_ADMIN, false);
+            return;
+        }
         if (detalle.getEstudianteCorreo() == null || detalle.getEstudianteCorreo().isEmpty()) {
             mostrarMensaje(etiquetaResultadoEnvio, "Este estudiante no tiene correo registrado.", false);
             return;
@@ -301,6 +425,8 @@ public class AdministrarCuentasController {
         try {
             emailService.enviarCredenciales(detalle);
             asignacionDAO.marcarNotificado(detalle.getId());
+            logAuditoriaDAO.registrarEvento("reenvio_credenciales",
+                    "Reenvió credenciales a " + detalle.getEstudianteNombre(), nombreUsuarioActual());
             cargarTablaAsignaciones();
             mostrarMensaje(etiquetaResultadoEnvio,
                     "Correo reenviado a " + detalle.getEstudianteNombre() + " (" + detalle.getEstudianteCorreo() + ").", true);
@@ -311,7 +437,10 @@ public class AdministrarCuentasController {
 
     @FXML
     private void confirmarYEnviarNotificaciones() {
-        List<AsignacionDetalle> pendientes = asignacionDAO.obtenerPendientesDeNotificar();
+        // Un profesor solo envia los correos pendientes de SUS cursos.
+        List<AsignacionDetalle> pendientes = SesionActual.esAdministrador()
+                ? asignacionDAO.obtenerPendientesDeNotificar()
+                : asignacionDAO.obtenerPendientesDeNotificarPorDueno(idUsuarioActual());
         if (pendientes.isEmpty()) {
             mostrarMensaje(etiquetaResultadoEnvio, "No hay correos pendientes de enviar.", true);
             return;
@@ -338,11 +467,15 @@ public class AdministrarCuentasController {
             mensaje += ", " + fallidos + " con error";
         }
         mostrarMensaje(etiquetaResultadoEnvio, mensaje + ".", fallidos == 0);
-        logAuditoriaDAO.registrarEvento("envio_credenciales", mensaje, "admin");
+        logAuditoriaDAO.registrarEvento("envio_credenciales", mensaje, nombreUsuarioActual());
         cargarTablaAsignaciones();
     }
 
     private void liberarAsignacion(AsignacionDetalle detalle) {
+        if (!puedeGestionar(cursoDAO.obtenerPorId(detalle.getCursoId()))) {
+            mostrarMensaje(etiquetaResultadoAsignacion, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
         try {
             asignacionDAO.eliminarAsignacion(detalle.getId());
             licenciaDAO.recalcularEstado(detalle.getLicenciaId(),
@@ -361,9 +494,7 @@ public class AdministrarCuentasController {
         }
     }
 
-    private boolean seSuperponen(String inicio1, String fin1, String inicio2, String fin2) {
-        return co.edu.usc.elvis.util.HorarioUtil.seSuperponen(inicio1, fin1, inicio2, fin2);
-    }
+    // ------------------------------------------------------------------ Licencias
 
     private void inicializarTablaLicencias() {
         colLicUsuario.setCellValueFactory(new PropertyValueFactory<>("usuario"));
@@ -394,12 +525,23 @@ public class AdministrarCuentasController {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : contenedor);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    boolean esAdmin = SesionActual.esAdministrador();
+                    botonEditar.setDisable(!esAdmin);
+                    botonEliminar.setDisable(!esAdmin);
+                    setGraphic(contenedor);
+                }
             }
         };
     }
 
     private void editarLicenciaDialogo(Licencia licencia) {
+        if (!SesionActual.esAdministrador()) {
+            mostrarMensaje(etiquetaResultadoLicencias, MENSAJE_SOLO_ADMIN, false);
+            return;
+        }
         Dialog<ButtonType> dialogo = new Dialog<>();
         dialogo.setTitle("Editar Licencia");
         dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
@@ -424,6 +566,8 @@ public class AdministrarCuentasController {
                 try {
                     licenciaDAO.actualizarLicenciaPorId(licencia.getId(), nuevoUsuario,
                             campoContrasena.getText().trim(), campoIp.getText().trim());
+                    logAuditoriaDAO.registrarEvento("licencia_editada",
+                            "Editó la licencia " + nuevoUsuario, nombreUsuarioActual());
                     cargarTablaLicencias();
                 } catch (SQLException e) {
                     mostrarMensaje(etiquetaResultadoLicencias, "Error al actualizar la licencia: " + e.getMessage(), false);
@@ -433,6 +577,10 @@ public class AdministrarCuentasController {
     }
 
     private void confirmarYEliminarLicencia(Licencia licencia) {
+        if (!SesionActual.esAdministrador()) {
+            mostrarMensaje(etiquetaResultadoLicencias, MENSAJE_SOLO_ADMIN, false);
+            return;
+        }
         Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION,
                 "¿Seguro que quieres eliminar la licencia \"" + licencia.getUsuario() + "\"?",
                 ButtonType.YES, ButtonType.NO);
@@ -443,6 +591,8 @@ public class AdministrarCuentasController {
             if (respuesta == ButtonType.YES) {
                 try {
                     licenciaDAO.eliminarLicencia(licencia.getId());
+                    logAuditoriaDAO.registrarEvento("licencia_eliminada",
+                            "Eliminó la licencia " + licencia.getUsuario(), nombreUsuarioActual());
                     cargarTablaLicencias();
                     actualizarEstadoLicencias();
                 } catch (SQLException e) {
@@ -453,10 +603,82 @@ public class AdministrarCuentasController {
         });
     }
 
+    @FXML
+    private void seleccionarArchivoLicencias() {
+        if (!SesionActual.esAdministrador()) {
+            mostrarMensaje(etiquetaResultadoLicencias, MENSAJE_SOLO_ADMIN, false);
+            return;
+        }
+        FileChooser selector = new FileChooser();
+        selector.setTitle("Selecciona el archivo Excel de licencias");
+        selector.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Excel (*.xlsx)", "*.xlsx"));
+
+        Window ventana = botonSeleccionarArchivoLicencias.getScene().getWindow();
+        File archivo = selector.showOpenDialog(ventana);
+
+        if (archivo != null) {
+            archivoLicenciasSeleccionado = archivo;
+            etiquetaArchivoLicencias.setText(archivo.getName());
+            botonCargarLicencias.setDisable(false);
+        }
+    }
+
+    @FXML
+    private void cargarLicencias() {
+        if (!SesionActual.esAdministrador()) {
+            mostrarMensaje(etiquetaResultadoLicencias, MENSAJE_SOLO_ADMIN, false);
+            return;
+        }
+        if (archivoLicenciasSeleccionado == null) {
+            return;
+        }
+
+        try {
+            ImportadorLicenciasExcel.ResultadoImportacion resultado =
+                    importadorLicencias.importar(archivoLicenciasSeleccionado);
+
+            String mensaje = resultado.agregadas + " licencias nuevas, "
+                    + resultado.actualizadas + " actualizadas";
+            if (resultado.conError > 0) {
+                mensaje += ", " + resultado.conError + " con error";
+            }
+            mostrarMensaje(etiquetaResultadoLicencias, mensaje + ".", resultado.conError == 0);
+
+            String detalleLog = mensaje + " (archivo: " + archivoLicenciasSeleccionado.getName() + ")";
+            logAuditoriaDAO.registrarEvento(ACCION_CARGA_LICENCIAS, detalleLog, nombreUsuarioActual());
+            actualizarEstadoLicencias();
+            cargarTablaLicencias();
+            panelCargarLicencias.setExpanded(false);
+        } catch (IOException e) {
+            mostrarMensaje(etiquetaResultadoLicencias, "No se pudo leer el archivo: " + e.getMessage(), false);
+        }
+    }
+
+    private void actualizarEstadoLicencias() {
+        int total = licenciaDAO.contarLicenciasTotales();
+        LogAuditoriaDAO.EventoReciente ultimaCarga = logAuditoriaDAO.obtenerUltimoEvento(ACCION_CARGA_LICENCIAS);
+
+        StringBuilder texto = new StringBuilder();
+        if (total == 0) {
+            texto.append("Aún no hay licencias cargadas en el sistema.");
+        } else {
+            texto.append("Actualmente hay ").append(total).append(" licencias en el sistema.");
+        }
+        if (ultimaCarga != null) {
+            texto.append(" Última carga: ").append(ultimaCarga.fechaHora)
+                    .append(" — ").append(ultimaCarga.detalle);
+        }
+        etiquetaEstadoLicencias.setText(texto.toString());
+    }
+
+    // --------------------------------------------------------------------- Cursos
+
     private void inicializarTablaCursos() {
         colCursoCodigo.setCellValueFactory(new PropertyValueFactory<>("codigoCurso"));
         colCursoNombre.setCellValueFactory(new PropertyValueFactory<>("nombreMateria"));
         colCursoDocente.setCellValueFactory(new PropertyValueFactory<>("docenteResponsable"));
+        colCursoDueno.setCellValueFactory(new PropertyValueFactory<>("duenoTexto"));
         colCursoAcciones.setCellFactory(columna -> crearCeldaAcciones());
         tablaCursos.setItems(cursosRegistrados);
         cargarTablaCursos();
@@ -478,16 +700,28 @@ public class AdministrarCuentasController {
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
-                setGraphic(empty ? null : contenedor);
+                if (empty) {
+                    setGraphic(null);
+                } else {
+                    Curso fila = getTableView().getItems().get(getIndex());
+                    boolean permitido = puedeGestionar(fila);
+                    botonEditar.setDisable(!permitido);
+                    botonEliminar.setDisable(!permitido);
+                    setGraphic(contenedor);
+                }
             }
         };
     }
 
     private void cargarTablaCursos() {
-        cursosRegistrados.setAll(cursoDAO.obtenerTodos());
+        cursosRegistrados.setAll(cursosVisibles());
     }
 
     private void cargarCursoParaEditar(Curso curso) {
+        if (!puedeGestionar(curso)) {
+            mostrarMensaje(etiquetaEstado, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
         cursoEnEdicion = curso;
         campoNombreMateria.setText(curso.getNombreMateria());
         campoCodigoCurso.setText(curso.getCodigoCurso());
@@ -497,12 +731,17 @@ public class AdministrarCuentasController {
         comboHoraInicio.setValue(curso.getHoraInicio());
         comboHoraFin.setValue(curso.getHoraFin());
         spinnerLicencias.getValueFactory().setValue(curso.getLicenciasRequeridas());
+        comboDuenoCurso.setValue(buscarUsuarioEnCombo(curso.getUsuarioId()));
         botonCrearCurso.setText("Actualizar Curso");
         panelRegistrarCurso.setExpanded(true);
         mostrarMensaje(etiquetaEstado, "Editando \"" + curso.getNombreMateria() + "\" — modifica los campos y guarda.", true);
     }
 
     private void confirmarYEliminarCurso(Curso curso) {
+        if (!puedeGestionar(curso)) {
+            mostrarMensaje(etiquetaEstado, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
         Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION,
                 "¿Seguro que quieres eliminar el curso \"" + curso.getNombreMateria()
                         + "\" (" + curso.getCodigoCurso() + ")?",
@@ -515,8 +754,7 @@ public class AdministrarCuentasController {
                 try {
                     cursoDAO.eliminarCurso(curso.getId());
                     mostrarMensaje(etiquetaEstado, "Curso \"" + curso.getNombreMateria() + "\" eliminado.", true);
-                    cargarTablaCursos();
-                    comboCursoDestino.getItems().setAll(cursoDAO.obtenerTodos());
+                    refrescarCursos();
                 } catch (SQLException e) {
                     mostrarMensaje(etiquetaEstado,
                             "No se pudo eliminar: es posible que el curso tenga estudiantes o licencias asociadas.",
@@ -526,8 +764,97 @@ public class AdministrarCuentasController {
         });
     }
 
+    @FXML
+    private void registrarCurso() {
+        String nombreMateria = campoNombreMateria.getText().trim();
+        String codigoCurso = campoCodigoCurso.getText().trim();
+        String semestre = campoSemestre.getText().trim();
+        String docente = campoDocente.getText().trim();
+        String dia = comboDia.getValue();
+        String horaInicio = comboHoraInicio.getValue();
+        String horaFin = comboHoraFin.getValue();
+        Integer licencias = spinnerLicencias.getValue();
+
+        if (nombreMateria.isEmpty() || codigoCurso.isEmpty() || semestre.isEmpty()
+                || docente.isEmpty() || dia == null || horaInicio == null || horaFin == null) {
+            mostrarMensaje(etiquetaEstado, "Completa todos los campos antes de guardar el curso.", false);
+            return;
+        }
+
+        boolean editando = cursoEnEdicion != null;
+        if (editando && !puedeGestionar(cursoEnEdicion)) {
+            mostrarMensaje(etiquetaEstado, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
+
+        // El administrador elige quien administra el curso; un profesor siempre es el dueño de lo que crea.
+        Integer duenoId;
+        if (SesionActual.esAdministrador()) {
+            Usuario elegido = comboDuenoCurso.getValue();
+            if (elegido == null) {
+                mostrarMensaje(etiquetaEstado, "Selecciona el dueño del curso.", false);
+                return;
+            }
+            duenoId = elegido.getId();
+        } else {
+            duenoId = idUsuarioActual();
+        }
+
+        boolean codigoDuplicado = editando
+                ? cursoDAO.existeCodigoCursoExcluyendo(codigoCurso, cursoEnEdicion.getId())
+                : cursoDAO.existeCodigoCurso(codigoCurso);
+
+        if (codigoDuplicado) {
+            mostrarMensaje(etiquetaEstado, "Ya existe otro curso registrado con el código " + codigoCurso + ".", false);
+            return;
+        }
+
+        try {
+            if (editando) {
+                cursoEnEdicion.setNombreMateria(nombreMateria);
+                cursoEnEdicion.setCodigoCurso(codigoCurso);
+                cursoEnEdicion.setSemestreLectivo(semestre);
+                cursoEnEdicion.setDocenteResponsable(docente);
+                cursoEnEdicion.setDiaClase(dia);
+                cursoEnEdicion.setHoraInicio(horaInicio);
+                cursoEnEdicion.setHoraFin(horaFin);
+                cursoEnEdicion.setLicenciasRequeridas(licencias);
+                cursoEnEdicion.setUsuarioId(duenoId);
+                cursoDAO.actualizarCurso(cursoEnEdicion);
+                mostrarMensaje(etiquetaEstado, "Curso \"" + nombreMateria + "\" actualizado correctamente.", true);
+            } else {
+                Curso nuevoCurso = new Curso(nombreMateria, codigoCurso, semestre, docente,
+                        dia, horaInicio, horaFin, licencias);
+                nuevoCurso.setUsuarioId(duenoId);
+                cursoDAO.registrarCurso(nuevoCurso);
+                mostrarMensaje(etiquetaEstado, "Curso \"" + nombreMateria + "\" registrado correctamente.", true);
+            }
+            limpiarFormularioCurso();
+            cursoEnEdicion = null;
+            botonCrearCurso.setText("Crear y Registrar Curso");
+            panelRegistrarCurso.setExpanded(false);
+            refrescarCursos();
+        } catch (SQLException e) {
+            mostrarMensaje(etiquetaEstado, "Error al guardar el curso: " + e.getMessage(), false);
+        }
+    }
+
+    private void limpiarFormularioCurso() {
+        campoNombreMateria.clear();
+        campoCodigoCurso.clear();
+        campoSemestre.clear();
+        campoDocente.clear();
+        comboDia.setValue(null);
+        comboHoraInicio.setValue(null);
+        comboHoraFin.setValue(null);
+        spinnerLicencias.getValueFactory().setValue(25);
+        seleccionarDuenoPorDefecto();
+    }
+
+    // ---------------------------------------------------------------- Estudiantes
+
     private void inicializarPanelEstudiantes() {
-        comboCursoDestino.getItems().setAll(cursoDAO.obtenerTodos());
+        comboCursoDestino.getItems().setAll(cursosVisibles());
         comboCursoDestino.setConverter(new StringConverter<Curso>() {
             @Override
             public String toString(Curso curso) {
@@ -635,144 +962,6 @@ public class AdministrarCuentasController {
         });
     }
 
-    private List<String> generarFranjasHorarias() {
-        return co.edu.usc.elvis.util.HorarioUtil.generarFranjasHorarias();
-    }
-
-    @FXML
-    private void registrarCurso() {
-        String nombreMateria = campoNombreMateria.getText().trim();
-        String codigoCurso = campoCodigoCurso.getText().trim();
-        String semestre = campoSemestre.getText().trim();
-        String docente = campoDocente.getText().trim();
-        String dia = comboDia.getValue();
-        String horaInicio = comboHoraInicio.getValue();
-        String horaFin = comboHoraFin.getValue();
-        Integer licencias = spinnerLicencias.getValue();
-
-        if (nombreMateria.isEmpty() || codigoCurso.isEmpty() || semestre.isEmpty()
-                || docente.isEmpty() || dia == null || horaInicio == null || horaFin == null) {
-            mostrarMensaje(etiquetaEstado, "Completa todos los campos antes de guardar el curso.", false);
-            return;
-        }
-
-        boolean editando = cursoEnEdicion != null;
-        boolean codigoDuplicado = editando
-                ? cursoDAO.existeCodigoCursoExcluyendo(codigoCurso, cursoEnEdicion.getId())
-                : cursoDAO.existeCodigoCurso(codigoCurso);
-
-        if (codigoDuplicado) {
-            mostrarMensaje(etiquetaEstado, "Ya existe otro curso registrado con el código " + codigoCurso + ".", false);
-            return;
-        }
-
-        try {
-            if (editando) {
-                cursoEnEdicion.setNombreMateria(nombreMateria);
-                cursoEnEdicion.setCodigoCurso(codigoCurso);
-                cursoEnEdicion.setSemestreLectivo(semestre);
-                cursoEnEdicion.setDocenteResponsable(docente);
-                cursoEnEdicion.setDiaClase(dia);
-                cursoEnEdicion.setHoraInicio(horaInicio);
-                cursoEnEdicion.setHoraFin(horaFin);
-                cursoEnEdicion.setLicenciasRequeridas(licencias);
-                cursoDAO.actualizarCurso(cursoEnEdicion);
-                mostrarMensaje(etiquetaEstado, "Curso \"" + nombreMateria + "\" actualizado correctamente.", true);
-            } else {
-                Curso nuevoCurso = new Curso(nombreMateria, codigoCurso, semestre, docente,
-                        dia, horaInicio, horaFin, licencias);
-                cursoDAO.registrarCurso(nuevoCurso);
-                mostrarMensaje(etiquetaEstado, "Curso \"" + nombreMateria + "\" registrado correctamente.", true);
-            }
-            limpiarFormularioCurso();
-            cursoEnEdicion = null;
-            botonCrearCurso.setText("Crear y Registrar Curso");
-            panelRegistrarCurso.setExpanded(false);
-            cargarTablaCursos();
-            comboCursoDestino.getItems().setAll(cursoDAO.obtenerTodos());
-        } catch (SQLException e) {
-            mostrarMensaje(etiquetaEstado, "Error al guardar el curso: " + e.getMessage(), false);
-        }
-    }
-
-    @FXML
-    private void seleccionarArchivoLicencias() {
-        FileChooser selector = new FileChooser();
-        selector.setTitle("Selecciona el archivo Excel de licencias");
-        selector.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("Excel (*.xlsx)", "*.xlsx"));
-
-        Window ventana = botonSeleccionarArchivoLicencias.getScene().getWindow();
-        File archivo = selector.showOpenDialog(ventana);
-
-        if (archivo != null) {
-            archivoLicenciasSeleccionado = archivo;
-            etiquetaArchivoLicencias.setText(archivo.getName());
-            botonCargarLicencias.setDisable(false);
-        }
-    }
-
-    @FXML
-    private void cargarLicencias() {
-        if (archivoLicenciasSeleccionado == null) {
-            return;
-        }
-
-        try {
-            ImportadorLicenciasExcel.ResultadoImportacion resultado =
-                    importadorLicencias.importar(archivoLicenciasSeleccionado);
-
-            String mensaje = resultado.agregadas + " licencias nuevas, "
-                    + resultado.actualizadas + " actualizadas";
-            if (resultado.conError > 0) {
-                mensaje += ", " + resultado.conError + " con error";
-            }
-            mostrarMensaje(etiquetaResultadoLicencias, mensaje + ".", resultado.conError == 0);
-
-            String detalleLog = mensaje + " (archivo: " + archivoLicenciasSeleccionado.getName() + ")";
-            logAuditoriaDAO.registrarEvento(ACCION_CARGA_LICENCIAS, detalleLog, "admin");
-            actualizarEstadoLicencias();
-            cargarTablaLicencias();
-            panelCargarLicencias.setExpanded(false);
-        } catch (IOException e) {
-            mostrarMensaje(etiquetaResultadoLicencias, "No se pudo leer el archivo: " + e.getMessage(), false);
-        }
-    }
-
-    private void actualizarEstadoLicencias() {
-        int total = licenciaDAO.contarLicenciasTotales();
-        LogAuditoriaDAO.EventoReciente ultimaCarga = logAuditoriaDAO.obtenerUltimoEvento(ACCION_CARGA_LICENCIAS);
-
-        StringBuilder texto = new StringBuilder();
-        if (total == 0) {
-            texto.append("Aún no hay licencias cargadas en el sistema.");
-        } else {
-            texto.append("Actualmente hay ").append(total).append(" licencias en el sistema.");
-        }
-        if (ultimaCarga != null) {
-            texto.append(" Última carga: ").append(ultimaCarga.fechaHora)
-                    .append(" — ").append(ultimaCarga.detalle);
-        }
-        etiquetaEstadoLicencias.setText(texto.toString());
-    }
-
-    private void mostrarMensaje(Label etiqueta, String mensaje, boolean exito) {
-        etiqueta.setText(mensaje);
-        etiqueta.getStyleClass().removeAll("mensaje-exito", "mensaje-error");
-        etiqueta.getStyleClass().add(exito ? "mensaje-exito" : "mensaje-error");
-    }
-
-    private void limpiarFormularioCurso() {
-        campoNombreMateria.clear();
-        campoCodigoCurso.clear();
-        campoSemestre.clear();
-        campoDocente.clear();
-        comboDia.setValue(null);
-        comboHoraInicio.setValue(null);
-        comboHoraFin.setValue(null);
-        spinnerLicencias.getValueFactory().setValue(25);
-    }
-
     @FXML
     private void seleccionarArchivoEstudiantes() {
         FileChooser selector = new FileChooser();
@@ -808,16 +997,33 @@ public class AdministrarCuentasController {
         if (cursoSeleccionado == null || estudiantesPreview.isEmpty()) {
             return;
         }
+        if (!puedeGestionar(cursoSeleccionado)) {
+            mostrarMensaje(etiquetaResultadoEstudiantes, MENSAJE_CURSO_AJENO, false);
+            return;
+        }
 
         int nuevos = 0;
         int actualizados = 0;
         int errores = 0;
+        int omitidos = 0;
 
         for (Estudiante fila : estudiantesPreview) {
             if (fila.getCodigoEstudiantil() == null || fila.getCodigoEstudiantil().isEmpty()) {
                 errores++;
                 continue;
             }
+
+            // Un profesor no puede "quitarle" un estudiante al curso de otro profesor
+            // subiendo una lista con el mismo codigo estudiantil.
+            Integer cursoActualId = estudianteDAO.obtenerCursoIdPorCodigo(fila.getCodigoEstudiantil());
+            if (cursoActualId != null && cursoActualId.intValue() != cursoSeleccionado.getId()) {
+                Curso cursoActual = cursoDAO.obtenerPorId(cursoActualId);
+                if (cursoActual != null && !puedeGestionar(cursoActual)) {
+                    omitidos++;
+                    continue;
+                }
+            }
+
             fila.setCursoId(cursoSeleccionado.getId());
             try {
                 if (estudianteDAO.existeCodigoEstudiantil(fila.getCodigoEstudiantil())) {
@@ -836,14 +1042,23 @@ public class AdministrarCuentasController {
         if (errores > 0) {
             mensaje += ", " + errores + " con error";
         }
+        if (omitidos > 0) {
+            mensaje += ", " + omitidos + " omitido(s) porque ya están en el curso de otro profesor";
+        }
         mostrarMensaje(etiquetaResultadoEstudiantes,
-                mensaje + " en el curso " + cursoSeleccionado.getNombreMateria() + ".", errores == 0);
+                mensaje + " en el curso " + cursoSeleccionado.getNombreMateria() + ".", errores == 0 && omitidos == 0);
 
         String detalleLog = mensaje + " (curso: " + cursoSeleccionado.getCodigoCurso() + ")";
-        logAuditoriaDAO.registrarEvento(ACCION_CARGA_ESTUDIANTES, detalleLog, "admin");
+        logAuditoriaDAO.registrarEvento(ACCION_CARGA_ESTUDIANTES, detalleLog, nombreUsuarioActual());
         cargarTablaEstudiantesCurso();
-        if (errores == 0) {
+        if (errores == 0 && omitidos == 0) {
             panelCargaListas.setExpanded(false);
         }
+    }
+
+    private void mostrarMensaje(Label etiqueta, String mensaje, boolean exito) {
+        etiqueta.setText(mensaje);
+        etiqueta.getStyleClass().removeAll("mensaje-exito", "mensaje-error");
+        etiqueta.getStyleClass().add(exito ? "mensaje-exito" : "mensaje-error");
     }
 }
