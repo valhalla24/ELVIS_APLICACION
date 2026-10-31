@@ -9,6 +9,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
@@ -20,14 +22,21 @@ public class PrincipalController {
     @FXML private Button botonCalendario;
     @FXML private Button botonReportes;
     @FXML private Button botonUsuarios;
-    @FXML private Label etiquetaUsuarioActual;
+    @FXML private MenuButton menuPerfil;
+    @FXML private Label avatarPerfil;
+    @FXML private Label etiquetaNombrePerfil;
+    @FXML private Label etiquetaRolPerfil;
+    @FXML private MenuItem itemPerfilDatos;
 
     @FXML
     public void initialize() {
         Usuario usuario = SesionActual.obtenerUsuario();
         if (usuario != null) {
             String rolLegible = usuario.esAdministrador() ? "Administrador" : "Profesor";
-            etiquetaUsuarioActual.setText(usuario.getNombreCompleto() + " (" + rolLegible + ")");
+            avatarPerfil.setText(iniciales(usuario.getNombreCompleto()));
+            etiquetaNombrePerfil.setText(usuario.getNombreCompleto());
+            etiquetaRolPerfil.setText(rolLegible);
+            itemPerfilDatos.setText("Sesión iniciada como\n" + usuario.getNombreUsuario() + " · " + rolLegible);
         }
 
         boolean esAdmin = SesionActual.esAdministrador();
@@ -35,6 +44,19 @@ public class PrincipalController {
         botonUsuarios.setManaged(esAdmin);
 
         mostrarInicio();
+    }
+
+    /** Primera letra del primer nombre y del ultimo apellido: "Ana Gómez" -> "AG". */
+    static String iniciales(String nombreCompleto) {
+        if (nombreCompleto == null || nombreCompleto.trim().isEmpty()) {
+            return "?";
+        }
+        String[] partes = nombreCompleto.trim().split("\\s+");
+        String inicial = partes[0].substring(0, 1);
+        if (partes.length > 1) {
+            inicial += partes[partes.length - 1].substring(0, 1);
+        }
+        return inicial.toUpperCase();
     }
 
     @FXML

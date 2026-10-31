@@ -19,7 +19,10 @@ public class App extends Application {
                 getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());
 
         stagePrincipal.setTitle("Servidor ELVIS - USC");
+        stagePrincipal.setMinWidth(1000);
+        stagePrincipal.setMinHeight(650);
         stagePrincipal.setScene(escena);
+        stagePrincipal.setMaximized(true);
         stagePrincipal.show();
     }
 

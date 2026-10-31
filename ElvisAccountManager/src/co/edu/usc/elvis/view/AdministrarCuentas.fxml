@@ -12,49 +12,101 @@
 <?import javafx.scene.control.TitledPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Text?>
 
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
             fx:controller="co.edu.usc.elvis.controller.AdministrarCuentasController"
             fitToWidth="true" styleClass="vista-administrar">
     <content>
-        <HBox spacing="20" alignment="TOP_CENTER">
+        <VBox spacing="16" alignment="TOP_CENTER">
             <padding>
-                <Insets top="24" right="24" bottom="24" left="24"/>
+                <Insets top="24" right="24" bottom="28" left="24"/>
             </padding>
 
-            <VBox spacing="20" HBox.hgrow="ALWAYS" maxWidth="560">
-                <TitledPane fx:id="panelRegistrarCurso" text="1. Registrar Nuevo Curso / Materia"
+            <VBox spacing="16" maxWidth="1100" prefWidth="1100">
+
+                <Label text="Sigue los 4 pasos en orden. Cada uno muestra cómo va; haz clic en un paso para abrirlo."
+                       styleClass="texto-ayuda" wrapText="true"/>
+
+                <!-- ============ PASO 1: LICENCIAS ============ -->
+                <TitledPane fx:id="panelCargarLicencias" text="Paso 1 · Licencias"
+                            expanded="false" styleClass="panel-colapsable">
+                    <content>
+                        <VBox spacing="10">
+                            <padding>
+                                <Insets top="12" bottom="4"/>
+                            </padding>
+                            <Label text="Las licencias son las cuentas de acceso del servidor. El administrador las carga con un Excel de tres columnas: Usuario, Contraseña e IP. Si el usuario ya existe, se actualiza; si no, se crea."
+                                   styleClass="texto-ayuda" wrapText="true"/>
+                            <Label fx:id="etiquetaAvisoRol" wrapText="true" styleClass="aviso-info"
+                                   text="Solo el administrador puede cargar, modificar o eliminar licencias. Aquí puedes consultarlas."
+                                   managed="false" visible="false"/>
+                            <Label fx:id="etiquetaEstadoLicencias" wrapText="true" styleClass="resumen-estado"/>
+                            <Button fx:id="botonSeleccionarArchivoLicencias" text="Seleccionar archivo Excel"
+                                    onAction="#seleccionarArchivoLicencias" styleClass="boton-secundario" maxWidth="Infinity"/>
+                            <Label fx:id="etiquetaArchivoLicencias" text="Ningún archivo seleccionado"
+                                   styleClass="texto-placeholder-panel"/>
+                            <Button fx:id="botonCargarLicencias" text="Cargar y actualizar licencias"
+                                    onAction="#cargarLicencias" styleClass="boton-primario" maxWidth="Infinity" disable="true"/>
+                            <Label fx:id="etiquetaResultadoLicencias" wrapText="true" styleClass="etiqueta-mensaje"/>
+
+                            <Label text="Licencias registradas" styleClass="etiqueta-campo"/>
+                            <TableView fx:id="tablaLicencias" prefHeight="230">
+                                <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
+                                <columns>
+                                    <TableColumn fx:id="colLicUsuario" minWidth="170" text="Usuario" prefWidth="130"/>
+                                    <TableColumn fx:id="colLicIp" minWidth="120" text="IP" prefWidth="100"/>
+                                    <TableColumn fx:id="colLicEstado" minWidth="100" text="Estado" prefWidth="80"/>
+                                    <TableColumn fx:id="colLicAcciones" minWidth="160" text="Acciones" prefWidth="120"/>
+                                </columns>
+                            </TableView>
+                        </VBox>
+                    </content>
+                </TitledPane>
+
+                <!-- ============ PASO 2: CURSOS ============ -->
+                <TitledPane fx:id="panelRegistrarCurso" text="Paso 2 · Cursos"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="12">
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
+                            <Label text="Registra cada materia con su día, su horario y cuántas licencias necesita. Para corregir o eliminar un curso usa los botones de la tabla de abajo."
+                                   styleClass="texto-ayuda" wrapText="true"/>
 
-                            <Label text="Nombre de la Materia / Asignatura" styleClass="etiqueta-campo"/>
+                            <Label text="Nombre de la materia" styleClass="etiqueta-campo"/>
                             <TextField fx:id="campoNombreMateria" promptText="Ej. Sistemas Distribuidos A-1"/>
 
-                            <Label text="Código del Curso" styleClass="etiqueta-campo"/>
-                            <TextField fx:id="campoCodigoCurso" promptText="Ej. ING-SIS-604"/>
-
-                            <Label text="Semestre Lectivo" styleClass="etiqueta-campo"/>
-                            <TextField fx:id="campoSemestre" promptText="Ej. 2024-B"/>
-
-                            <Label text="Docente Responsable" styleClass="etiqueta-campo"/>
-                            <TextField fx:id="campoDocente" promptText="Ej. Ing. Carlos H. Vivas"/>
-
-                            <Label text="Día de Clase" styleClass="etiqueta-campo"/>
-                            <ComboBox fx:id="comboDia" promptText="Seleccionar día..." maxWidth="Infinity"/>
-
-                            <Label text="Horario / Franja" styleClass="etiqueta-campo"/>
-                            <HBox spacing="10" alignment="CENTER_LEFT">
-                                <ComboBox fx:id="comboHoraInicio" promptText="Hora inicio" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                                <Label text="a"/>
-                                <ComboBox fx:id="comboHoraFin" promptText="Hora fin" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <HBox spacing="14">
+                                <VBox spacing="12" HBox.hgrow="ALWAYS">
+                                    <Label text="Código del curso" styleClass="etiqueta-campo"/>
+                                    <TextField fx:id="campoCodigoCurso" promptText="Ej. ING-SIS-604"/>
+                                </VBox>
+                                <VBox spacing="12" HBox.hgrow="ALWAYS">
+                                    <Label text="Semestre lectivo" styleClass="etiqueta-campo"/>
+                                    <TextField fx:id="campoSemestre" promptText="Ej. 2024-B"/>
+                                </VBox>
                             </HBox>
 
-                            <Label text="Cantidad de Licencias Requeridas" styleClass="etiqueta-campo"/>
+                            <Label text="Docente responsable" styleClass="etiqueta-campo"/>
+                            <TextField fx:id="campoDocente" promptText="Ej. Ing. Carlos H. Vivas"/>
+
+                            <HBox spacing="14">
+                                <VBox spacing="12" HBox.hgrow="ALWAYS">
+                                    <Label text="Día de clase" styleClass="etiqueta-campo"/>
+                                    <ComboBox fx:id="comboDia" promptText="Seleccionar día..." maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="12" HBox.hgrow="ALWAYS">
+                                    <Label text="Hora de inicio" styleClass="etiqueta-campo"/>
+                                    <ComboBox fx:id="comboHoraInicio" promptText="Hora inicio" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="12" HBox.hgrow="ALWAYS">
+                                    <Label text="Hora de fin" styleClass="etiqueta-campo"/>
+                                    <ComboBox fx:id="comboHoraFin" promptText="Hora fin" maxWidth="Infinity"/>
+                                </VBox>
+                            </HBox>
+
+                            <Label text="Cantidad de licencias requeridas" styleClass="etiqueta-campo"/>
                             <Spinner fx:id="spinnerLicencias" editable="true"/>
 
                             <Label fx:id="etiquetaDuenoCurso" text="Dueño del curso (usuario que lo administra)"
@@ -62,129 +114,110 @@
                             <ComboBox fx:id="comboDuenoCurso" promptText="Selecciona un usuario..."
                                       maxWidth="Infinity" managed="false" visible="false"/>
 
-                            <Button fx:id="botonCrearCurso" text="Crear y Registrar Curso" onAction="#registrarCurso"
+                            <Button fx:id="botonCrearCurso" text="Crear y registrar curso" onAction="#registrarCurso"
                                     styleClass="boton-primario" maxWidth="Infinity"/>
                             <Label fx:id="etiquetaEstado" wrapText="true" styleClass="etiqueta-mensaje"/>
 
-                            <Label text="Cursos Registrados" styleClass="etiqueta-campo"/>
-                            <TableView fx:id="tablaCursos" prefHeight="180">
+                            <Label text="Cursos registrados" styleClass="etiqueta-campo"/>
+                            <TableView fx:id="tablaCursos" prefHeight="230">
+                                <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                                 <columns>
-                                    <TableColumn fx:id="colCursoCodigo" text="Código" prefWidth="70"/>
-                                    <TableColumn fx:id="colCursoNombre" text="Materia" prefWidth="115"/>
-                                    <TableColumn fx:id="colCursoDocente" text="Docente" prefWidth="100"/>
-                                    <TableColumn fx:id="colCursoDueno" text="Dueño" prefWidth="95"/>
-                                    <TableColumn fx:id="colCursoAcciones" text="Acciones" prefWidth="110"/>
+                                    <TableColumn fx:id="colCursoCodigo" minWidth="90" text="Código" prefWidth="70"/>
+                                    <TableColumn fx:id="colCursoNombre" minWidth="190" text="Materia" prefWidth="115"/>
+                                    <TableColumn fx:id="colCursoDocente" minWidth="140" text="Docente" prefWidth="100"/>
+                                    <TableColumn fx:id="colCursoDueno" minWidth="140" text="Dueño" prefWidth="95"/>
+                                    <TableColumn fx:id="colCursoAcciones" minWidth="160" text="Acciones" prefWidth="110"/>
                                 </columns>
                             </TableView>
                         </VBox>
                     </content>
                 </TitledPane>
 
-                <TitledPane fx:id="panelCargaListas" text="2. Carga de Listas (.xlsx)"
+                <!-- ============ PASO 3: LISTAS DE ESTUDIANTES ============ -->
+                <TitledPane fx:id="panelCargaListas" text="Paso 3 · Listas de estudiantes"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="10">
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
+                            <Label text="Elige el curso y sube el Excel con sus estudiantes. El programa reconoce las columnas (código, nombre, apellidos y correo) aunque cambien de orden o haya filas vacías arriba."
+                                   styleClass="texto-ayuda" wrapText="true"/>
 
-                            <Label text="Curso Destino para la Lista" styleClass="etiqueta-campo"/>
+                            <Label text="Curso al que pertenece la lista" styleClass="etiqueta-campo"/>
                             <ComboBox fx:id="comboCursoDestino" promptText="Selecciona un curso..." maxWidth="Infinity"/>
 
-                            <Button fx:id="botonSeleccionarArchivoEstudiantes" text="Seleccionar Archivo Excel"
+                            <Button fx:id="botonSeleccionarArchivoEstudiantes" text="Seleccionar archivo Excel"
                                     onAction="#seleccionarArchivoEstudiantes" styleClass="boton-secundario" maxWidth="Infinity"/>
                             <Label fx:id="etiquetaArchivoEstudiantes" text="Ningún archivo seleccionado"
                                    styleClass="texto-placeholder-panel"/>
 
                             <Label fx:id="etiquetaResumenPreview" wrapText="true" styleClass="etiqueta-mensaje"/>
-                            <TableView fx:id="tablaPreviewEstudiantes" prefHeight="160">
+                            <TableView fx:id="tablaPreviewEstudiantes" prefHeight="200">
+                                <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                                 <columns>
-                                    <TableColumn fx:id="colNombre" text="Nombre Estudiante" prefWidth="180"/>
+                                    <TableColumn fx:id="colNombre" text="Estudiante" prefWidth="180"/>
                                     <TableColumn fx:id="colCodigo" text="Código" prefWidth="90"/>
-                                    <TableColumn fx:id="colCorreo" text="Correo Institucional" prefWidth="200"/>
+                                    <TableColumn fx:id="colCorreo" text="Correo institucional" prefWidth="200"/>
                                 </columns>
                             </TableView>
 
-                            <Button fx:id="botonValidarYProcesar" text="Validar y Procesar Lista"
+                            <Button fx:id="botonValidarYProcesar" text="Validar y procesar lista"
                                     onAction="#procesarListaEstudiantes" styleClass="boton-primario" maxWidth="Infinity" disable="true"/>
                             <Label fx:id="etiquetaResultadoEstudiantes" wrapText="true" styleClass="etiqueta-mensaje"/>
 
-                            <Label text="Estudiantes Registrados en este Curso" styleClass="etiqueta-campo"/>
-                            <TableView fx:id="tablaEstudiantesCurso" prefHeight="160">
+                            <Label text="Estudiantes registrados en este curso" styleClass="etiqueta-campo"/>
+                            <TableView fx:id="tablaEstudiantesCurso" prefHeight="230">
+                                <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                                 <columns>
-                                    <TableColumn fx:id="colEstNombre" text="Nombre" prefWidth="180"/>
-                                    <TableColumn fx:id="colEstCodigo" text="Código" prefWidth="90"/>
-                                    <TableColumn fx:id="colEstAcciones" text="Acciones" prefWidth="120"/>
+                                    <TableColumn fx:id="colEstNombre" minWidth="200" text="Nombre" prefWidth="180"/>
+                                    <TableColumn fx:id="colEstCodigo" minWidth="110" text="Código" prefWidth="90"/>
+                                    <TableColumn fx:id="colEstAcciones" minWidth="160" text="Acciones" prefWidth="120"/>
                                 </columns>
                             </TableView>
                         </VBox>
                     </content>
                 </TitledPane>
-            </VBox>
 
-            <VBox spacing="20" HBox.hgrow="ALWAYS" maxWidth="560">
-                <TitledPane fx:id="panelCargarLicencias" text="0. Cargar / Actualizar Licencias"
+                <!-- ============ PASO 4: ASIGNAR Y ENVIAR ============ -->
+                <TitledPane fx:id="panelAsignacion" text="Paso 4 · Asignar y enviar credenciales"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="10">
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
-                            <Label fx:id="etiquetaAvisoRol" wrapText="true" styleClass="aviso-info"
-                                   text="Solo el administrador puede cargar, modificar o eliminar licencias. Aquí puedes consultarlas."
-                                   managed="false" visible="false"/>
-                            <Label fx:id="etiquetaEstadoLicencias" wrapText="true" styleClass="resumen-estado"/>
-                            <Label text="Sube un Excel (.xlsx) con las columnas: Usuario | Contraseña | IP. Si el usuario ya existe, se actualiza; si no, se crea."
-                                   styleClass="texto-descripcion" wrapText="true"/>
-                            <Button fx:id="botonSeleccionarArchivoLicencias" text="Seleccionar Archivo Excel"
-                                    onAction="#seleccionarArchivoLicencias" styleClass="boton-secundario" maxWidth="Infinity"/>
-                            <Label fx:id="etiquetaArchivoLicencias" text="Ningún archivo seleccionado"
-                                   styleClass="texto-placeholder-panel"/>
-                            <Button fx:id="botonCargarLicencias" text="Cargar y Actualizar Licencias"
-                                    onAction="#cargarLicencias" styleClass="boton-primario" maxWidth="Infinity" disable="true"/>
-                            <Label fx:id="etiquetaResultadoLicencias" wrapText="true" styleClass="etiqueta-mensaje"/>
+                            <Label text="Elige un curso y reparte las licencias entre sus estudiantes. Revisa la tabla y, cuando todo esté bien, envía las credenciales por correo."
+                                   styleClass="texto-ayuda" wrapText="true"/>
 
-                            <Label text="Licencias Registradas" styleClass="etiqueta-campo"/>
-                            <TableView fx:id="tablaLicencias" prefHeight="180">
+                            <Label text="Curso a asignar" styleClass="etiqueta-campo"/>
+                            <ComboBox fx:id="comboCursoAsignar" promptText="Selecciona un curso..." maxWidth="Infinity"/>
+                            <Label fx:id="etiquetaInfoCursoAsignar" wrapText="true" styleClass="texto-descripcion"/>
+
+                            <Button fx:id="botonAsignarLicencias" text="Asignar licencias" onAction="#asignarLicenciasCurso"
+                                    styleClass="boton-primario" maxWidth="Infinity"/>
+                            <Label fx:id="etiquetaResultadoAsignacion" wrapText="true" styleClass="etiqueta-mensaje"/>
+
+                            <Label text="Asignaciones activas" styleClass="etiqueta-campo"/>
+                            <TableView fx:id="tablaAsignaciones" prefHeight="260">
+                                <columnResizePolicy><TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/></columnResizePolicy>
                                 <columns>
-                                    <TableColumn fx:id="colLicUsuario" text="Usuario" prefWidth="130"/>
-                                    <TableColumn fx:id="colLicIp" text="IP" prefWidth="100"/>
-                                    <TableColumn fx:id="colLicEstado" text="Estado" prefWidth="80"/>
-                                    <TableColumn fx:id="colLicAcciones" text="Acciones" prefWidth="120"/>
+                                    <TableColumn fx:id="colAsigCurso" minWidth="150" text="Curso" prefWidth="120"/>
+                                    <TableColumn fx:id="colAsigEstudiante" minWidth="135" text="Estudiante" prefWidth="135"/>
+                                    <TableColumn fx:id="colAsigLicencia" minWidth="150" text="Licencia" prefWidth="150"/>
+                                    <TableColumn fx:id="colAsigHorario" minWidth="250" text="Horario" prefWidth="215"/>
+                                    <TableColumn fx:id="colAsigEstadoEnvio" minWidth="75" text="Envío" prefWidth="75"/>
+                                    <TableColumn fx:id="colAsigAcciones" minWidth="185" text="Acciones" prefWidth="185"/>
                                 </columns>
                             </TableView>
+
+                            <Button fx:id="botonConfirmarYEnviar" text="Confirmar y enviar correos pendientes"
+                                    onAction="#confirmarYEnviarNotificaciones" styleClass="boton-primario" maxWidth="Infinity"/>
+                            <Label fx:id="etiquetaResultadoEnvio" wrapText="true" styleClass="etiqueta-mensaje"/>
                         </VBox>
                     </content>
                 </TitledPane>
-
-                <VBox styleClass="tarjeta-panel" spacing="10">
-                    <Text text="3. Asignación y Reparto de Licencias de Acceso" styleClass="titulo-panel"/>
-
-                    <Label text="Curso a Asignar" styleClass="etiqueta-campo"/>
-                    <ComboBox fx:id="comboCursoAsignar" promptText="Selecciona un curso..." maxWidth="Infinity"/>
-                    <Label fx:id="etiquetaInfoCursoAsignar" wrapText="true" styleClass="texto-descripcion"/>
-
-                    <Button fx:id="botonAsignarLicencias" text="Asignar Licencias" onAction="#asignarLicenciasCurso"
-                            styleClass="boton-primario" maxWidth="Infinity"/>
-                    <Label fx:id="etiquetaResultadoAsignacion" wrapText="true" styleClass="etiqueta-mensaje"/>
-
-                    <Label text="Asignaciones Activas" styleClass="etiqueta-campo"/>
-                    <TableView fx:id="tablaAsignaciones" prefHeight="220">
-                        <columns>
-                            <TableColumn fx:id="colAsigCurso" text="Curso" prefWidth="110"/>
-                            <TableColumn fx:id="colAsigEstudiante" text="Estudiante" prefWidth="140"/>
-                            <TableColumn fx:id="colAsigLicencia" text="Licencia" prefWidth="110"/>
-                            <TableColumn fx:id="colAsigHorario" text="Horario" prefWidth="150"/>
-                            <TableColumn fx:id="colAsigEstadoEnvio" text="Envío" prefWidth="80"/>
-                            <TableColumn fx:id="colAsigAcciones" text="Acciones" prefWidth="140"/>
-                        </columns>
-                    </TableView>
-
-                    <Button fx:id="botonConfirmarYEnviar" text="Confirmar y Enviar Correos Pendientes"
-                            onAction="#confirmarYEnviarNotificaciones" styleClass="boton-primario" maxWidth="Infinity"/>
-                    <Label fx:id="etiquetaResultadoEnvio" wrapText="true" styleClass="etiqueta-mensaje"/>
-                </VBox>
             </VBox>
-        </HBox>
+        </VBox>
     </content>
 </ScrollPane>

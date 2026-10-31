@@ -16,6 +16,7 @@ import co.edu.usc.elvis.util.EmailService;
 import co.edu.usc.elvis.util.HorarioUtil;
 import co.edu.usc.elvis.util.ImportadorEstudiantesExcel;
 import co.edu.usc.elvis.util.ImportadorLicenciasExcel;
+import co.edu.usc.elvis.util.Mensajes;
 import co.edu.usc.elvis.util.SesionActual;
 import java.io.File;
 import java.io.IOException;
@@ -101,6 +102,7 @@ public class AdministrarCuentasController {
     @FXML private TableColumn<Estudiante, String> colEstCodigo;
     @FXML private TableColumn<Estudiante, Void> colEstAcciones;
 
+    @FXML private TitledPane panelAsignacion;
     @FXML private ComboBox<Curso> comboCursoAsignar;
     @FXML private Label etiquetaInfoCursoAsignar;
     @FXML private Button botonAsignarLicencias;
@@ -132,6 +134,7 @@ public class AdministrarCuentasController {
     private final ObservableList<AsignacionDetalle> asignacionesVista = FXCollections.observableArrayList();
     private File archivoLicenciasSeleccionado;
     private Curso cursoEnEdicion;
+    private boolean inicializando = true;
 
     private static final String ACCION_CARGA_LICENCIAS = "carga_licencias";
     private static final String ACCION_CARGA_ESTUDIANTES = "carga_estudiantes";
@@ -150,6 +153,9 @@ public class AdministrarCuentasController {
 
         spinnerLicencias.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 100, 25));
 
+        Mensajes.configurar(etiquetaEstado, etiquetaResultadoLicencias, etiquetaResumenPreview,
+                etiquetaResultadoEstudiantes, etiquetaResultadoAsignacion, etiquetaResultadoEnvio);
+
         actualizarEstadoLicencias();
         inicializarPanelEstudiantes();
         inicializarTablaCursos();
@@ -157,6 +163,63 @@ public class AdministrarCuentasController {
         inicializarPanelAsignacion();
         inicializarComboDueno();
         aplicarRestriccionesDeRol();
+        configurarMensajesDeTablasVacias();
+
+        inicializando = false;
+        actualizarTitulosDePasos();
+        actualizarTextosDeCombosDeCursos();
+    }
+
+    /** Textos amables cuando una tabla todavia no tiene datos. */
+    private void configurarMensajesDeTablasVacias() {
+        tablaLicencias.setPlaceholder(textoVacio("Aún no hay licencias. El administrador debe cargarlas con un Excel."));
+        tablaCursos.setPlaceholder(textoVacio("Aún no hay cursos registrados. Crea el primero con el formulario de arriba."));
+        tablaPreviewEstudiantes.setPlaceholder(textoVacio("Sube un Excel para ver aquí los estudiantes que se detectan."));
+        tablaEstudiantesCurso.setPlaceholder(textoVacio("Elige un curso para ver sus estudiantes. Si no aparece ninguno, sube su lista."));
+        tablaAsignaciones.setPlaceholder(textoVacio("Todavía no hay licencias asignadas."));
+    }
+
+    private Label textoVacio(String texto) {
+        Label etiqueta = new Label(texto);
+        etiqueta.getStyleClass().add("texto-vacio");
+        etiqueta.setWrapText(true);
+        return etiqueta;
+    }
+
+    /**
+     * Cada paso muestra en su titulo como va (cuantas licencias, cursos,
+     * estudiantes y asignaciones hay), incluso cuando esta cerrado.
+     */
+    private void actualizarTitulosDePasos() {
+        if (inicializando) {
+            return;
+        }
+        int licencias = licenciaDAO.contarLicenciasTotales();
+        panelCargarLicencias.setText("Paso 1 · Licencias — "
+                + (licencias == 0 ? "aún no hay licencias cargadas" : licencias + " cargadas"));
+
+        List<Curso> cursos = cursosVisibles();
+        panelRegistrarCurso.setText("Paso 2 · Cursos — "
+                + (cursos.isEmpty() ? "aún no hay cursos" : cursos.size() + " registrado(s)"));
+
+        int estudiantes = 0;
+        for (Curso c : cursos) {
+            estudiantes += estudianteDAO.contarEstudiantesPorCurso(c.getId());
+        }
+        panelCargaListas.setText("Paso 3 · Listas de estudiantes — "
+                + (estudiantes == 0 ? "aún no hay estudiantes" : estudiantes + " estudiante(s)"));
+
+        int asignaciones = asignacionesVista.size();
+        long pendientes = asignacionesVista.stream().filter(a -> !a.isNotificado()).count();
+        panelAsignacion.setText("Paso 4 · Asignar y enviar credenciales — "
+                + (asignaciones == 0 ? "sin asignaciones todavía"
+                        : asignaciones + " asignación(es), " + pendientes + " pendiente(s) de envío"));
+    }
+
+    private void actualizarTextosDeCombosDeCursos() {
+        String aviso = cursosVisibles().isEmpty() ? "Aún no hay cursos (crea uno en el Paso 2)" : "Selecciona un curso...";
+        comboCursoDestino.setPromptText(aviso);
+        comboCursoAsignar.setPromptText(aviso);
     }
 
     /**
@@ -217,6 +280,7 @@ public class AdministrarCuentasController {
         List<Curso> visibles = cursosVisibles();
         comboCursoDestino.getItems().setAll(visibles);
         comboCursoAsignar.getItems().setAll(visibles);
+        actualizarTextosDeCombosDeCursos();
     }
 
     // --------------------------------------------------------------- Dueño del curso
@@ -383,6 +447,7 @@ public class AdministrarCuentasController {
         asignacionesVista.setAll(SesionActual.esAdministrador()
                 ? asignacionDAO.obtenerTodasConDetalle()
                 : asignacionDAO.obtenerConDetallePorDueno(idUsuarioActual()));
+        actualizarTitulosDePasos();
     }
 
     private TableCell<AsignacionDetalle, Void> crearCeldaAccionesAsignacion() {
@@ -507,6 +572,7 @@ public class AdministrarCuentasController {
 
     private void cargarTablaLicencias() {
         licenciasRegistradas.setAll(licenciaDAO.obtenerTodas());
+        actualizarTitulosDePasos();
     }
 
     private TableCell<Licencia, Void> crearCeldaAccionesLicencia() {
@@ -715,6 +781,7 @@ public class AdministrarCuentasController {
 
     private void cargarTablaCursos() {
         cursosRegistrados.setAll(cursosVisibles());
+        actualizarTitulosDePasos();
     }
 
     private void cargarCursoParaEditar(Curso curso) {
@@ -831,7 +898,7 @@ public class AdministrarCuentasController {
             }
             limpiarFormularioCurso();
             cursoEnEdicion = null;
-            botonCrearCurso.setText("Crear y Registrar Curso");
+            botonCrearCurso.setText("Crear y registrar curso");
             panelRegistrarCurso.setExpanded(false);
             refrescarCursos();
         } catch (SQLException e) {
@@ -885,6 +952,7 @@ public class AdministrarCuentasController {
     private void cargarTablaEstudiantesCurso() {
         Curso curso = comboCursoDestino.getValue();
         estudiantesDelCurso.setAll(curso == null ? Collections.emptyList() : estudianteDAO.obtenerPorCurso(curso.getId()));
+        actualizarTitulosDePasos();
     }
 
     private TableCell<Estudiante, Void> crearCeldaAccionesEstudiante() {

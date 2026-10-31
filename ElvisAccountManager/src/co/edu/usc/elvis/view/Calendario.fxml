@@ -4,6 +4,8 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
 <ScrollPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
@@ -15,9 +17,29 @@
                 <Insets top="24" right="24" bottom="24" left="24"/>
             </padding>
 
-            <Label fx:id="etiquetaAlerta" wrapText="true" maxWidth="700" styleClass="alerta-cupo"
+            <Label fx:id="etiquetaAlerta" wrapText="true" maxWidth="760" styleClass="alerta-cupo"
                    managed="false" visible="false"/>
-            <Label fx:id="etiquetaPicoOcupacion" styleClass="resumen-estado"/>
+            <Label fx:id="etiquetaPicoOcupacion" styleClass="resumen-estado" maxWidth="760"/>
+
+            <HBox fx:id="leyendaCalendario" spacing="20" alignment="CENTER_LEFT">
+                <Label text="Cómo leer los colores:" styleClass="etiqueta-campo"/>
+                <HBox spacing="7" alignment="CENTER_LEFT">
+                    <Region styleClass="leyenda-muestra, leyenda-sin-uso"/>
+                    <Label text="Sin licencias en uso" styleClass="leyenda-texto"/>
+                </HBox>
+                <HBox spacing="7" alignment="CENTER_LEFT">
+                    <Region styleClass="leyenda-muestra, leyenda-normal"/>
+                    <Label text="Normal (menos de 70%)" styleClass="leyenda-texto"/>
+                </HBox>
+                <HBox spacing="7" alignment="CENTER_LEFT">
+                    <Region styleClass="leyenda-muestra, leyenda-moderada"/>
+                    <Label text="Moderada (70% a 85%)" styleClass="leyenda-texto"/>
+                </HBox>
+                <HBox spacing="7" alignment="CENTER_LEFT">
+                    <Region styleClass="leyenda-muestra, leyenda-alta"/>
+                    <Label text="Alta (más de 85%)" styleClass="leyenda-texto"/>
+                </HBox>
+            </HBox>
 
             <GridPane fx:id="grillaCalendario" hgap="4" vgap="4"/>
         </VBox>

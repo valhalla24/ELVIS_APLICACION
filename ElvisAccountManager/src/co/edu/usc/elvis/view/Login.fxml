@@ -1,25 +1,47 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Text?>
 
-<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-      fx:controller="co.edu.usc.elvis.controller.LoginController"
-      alignment="CENTER" spacing="14" styleClass="vista-inicio">
-    <padding>
-        <Insets top="50" bottom="50" left="40" right="40"/>
-    </padding>
-    <Text text="🛡" styleClass="icono-grande"/>
-    <Text text="SERVIDOR ELVIS" styleClass="titulo-principal"/>
-    <Text text="Iniciar Sesión" styleClass="titulo-secundario"/>
+<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="co.edu.usc.elvis.controller.LoginController"
+           styleClass="fondo-login">
+    <VBox styleClass="tarjeta-login" alignment="CENTER" spacing="10"
+          prefWidth="420" minWidth="420" maxWidth="420" maxHeight="-Infinity">
 
-    <TextField fx:id="campoUsuario" promptText="Usuario" maxWidth="260"/>
-    <PasswordField fx:id="campoContrasena" promptText="Contraseña" maxWidth="260"/>
-    <Button text="Ingresar" onAction="#iniciarSesion" styleClass="boton-primario" maxWidth="260"/>
-    <Label fx:id="etiquetaError" styleClass="mensaje-error" wrapText="true" maxWidth="260"/>
-</VBox>
+        <ImageView fx:id="imagenLogo" fitHeight="84" preserveRatio="true" visible="false" managed="false"/>
+        <Label fx:id="textoLogo" text="🛡" styleClass="icono-grande"/>
+        <Label text="SERVIDOR ELVIS" styleClass="titulo-principal"/>
+        <Label text="Universidad Santiago de Cali · DTSI" styleClass="subtitulo-rojo"/>
+        <Label text="Iniciar sesión" styleClass="titulo-secundario">
+            <VBox.margin><javafx.geometry.Insets top="12" bottom="4"/></VBox.margin>
+        </Label>
+
+        <VBox spacing="4" maxWidth="Infinity">
+            <Label text="Usuario" styleClass="etiqueta-campo"/>
+            <TextField fx:id="campoUsuario" promptText="Escribe tu usuario" onAction="#irAContrasena"/>
+        </VBox>
+
+        <VBox spacing="4" maxWidth="Infinity">
+            <Label text="Contraseña" styleClass="etiqueta-campo"/>
+            <PasswordField fx:id="campoContrasena" promptText="Escribe tu contraseña" onAction="#iniciarSesion"/>
+            <TextField fx:id="campoContrasenaVisible" promptText="Escribe tu contraseña" onAction="#iniciarSesion"/>
+            <CheckBox fx:id="checkMostrarContrasena" text="Mostrar contraseña" onAction="#alternarContrasena"/>
+        </VBox>
+
+        <Label fx:id="etiquetaError" wrapText="true" styleClass="etiqueta-mensaje, mensaje-error"/>
+
+        <Button text="Ingresar" onAction="#iniciarSesion" defaultButton="true"
+                styleClass="boton-primario" maxWidth="Infinity"/>
+
+        <Label text="Dirección de Tecnologías y Servicios de Información" styleClass="login-pie">
+            <VBox.margin><javafx.geometry.Insets top="8"/></VBox.margin>
+        </Label>
+    </VBox>
+</StackPane>
