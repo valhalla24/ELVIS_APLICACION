@@ -7,12 +7,18 @@ import co.edu.usc.elvis.model.Asignacion;
 import co.edu.usc.elvis.model.Curso;
 import co.edu.usc.elvis.util.HorarioUtil;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.VBox;
 
+/**
+ * Calendario semanal en franjas de media hora. Hace solo DOS consultas a la
+ * base (cursos y asignaciones) y el resto es calculo en memoria.
+ */
 public class CalendarioController {
 
     @FXML private GridPane grillaCalendario;
@@ -24,8 +30,22 @@ public class CalendarioController {
     private final LicenciaDAO licenciaDAO = new LicenciaDAO();
 
     private static final String[] DIAS = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"};
+    private static final int MINUTOS_POR_FRANJA = 30;
     private static final double UMBRAL_ALTA = 0.85;
     private static final double UMBRAL_MODERADA = 0.70;
+
+    /** Un curso con su horario ya convertido a minutos, para no repetir la conversion en cada casilla. */
+    private static class CursoEnMinutos {
+        final Curso curso;
+        final int inicio;
+        final int fin;
+
+        CursoEnMinutos(Curso curso) {
+            this.curso = curso;
+            this.inicio = HorarioUtil.aMinutos(curso.getHoraInicio());
+            this.fin = HorarioUtil.aMinutos(curso.getHoraFin());
+        }
+    }
 
     @FXML
     public void initialize() {
@@ -35,9 +55,20 @@ public class CalendarioController {
     private void construirGrilla() {
         grillaCalendario.getChildren().clear();
 
-        List<Curso> cursos = cursoDAO.obtenerTodos();
         int totalLicencias = licenciaDAO.contarLicenciasTotales();
         List<String> horas = HorarioUtil.generarFranjasHorarias();
+
+        // Consulta 1: cursos agrupados por dia
+        Map<String, List<CursoEnMinutos>> cursosPorDia = new HashMap<>();
+        for (Curso c : cursoDAO.obtenerTodos()) {
+            cursosPorDia.computeIfAbsent(c.getDiaClase(), k -> new ArrayList<>()).add(new CursoEnMinutos(c));
+        }
+        // Consulta 2: asignaciones agrupadas por dia, como [inicio, fin] en minutos
+        Map<String, List<int[]>> usoPorDia = new HashMap<>();
+        for (Asignacion a : asignacionDAO.obtenerTodas()) {
+            usoPorDia.computeIfAbsent(a.getDiaFranja(), k -> new ArrayList<>())
+                    .add(new int[]{HorarioUtil.aMinutos(a.getHoraInicio()), HorarioUtil.aMinutos(a.getHoraFin())});
+        }
 
         Label esquina = new Label("Hora");
         esquina.getStyleClass().add("calendario-encabezado");
@@ -55,20 +86,31 @@ public class CalendarioController {
 
         for (int fila = 0; fila < horas.size(); fila++) {
             String hora = horas.get(fila);
+            int minutosFranja = HorarioUtil.aMinutos(hora);
+
             Label etiquetaHora = new Label(hora);
             etiquetaHora.getStyleClass().add("calendario-hora");
             grillaCalendario.add(etiquetaHora, 0, fila + 1);
 
             for (int col = 0; col < DIAS.length; col++) {
                 String dia = DIAS[col];
-                List<Curso> cursosEnCelda = new ArrayList<>();
-                for (Curso c : cursos) {
-                    if (c.getDiaClase().equals(dia) && HorarioUtil.incluyeHora(c.getHoraInicio(), c.getHoraFin(), hora)) {
-                        cursosEnCelda.add(c);
+
+                // cursos que ocupan esta franja; la etiqueta solo se escribe en la primera franja del curso
+                List<CursoEnMinutos> cursosQueEmpiezanAqui = new ArrayList<>();
+                for (CursoEnMinutos c : cursosPorDia.getOrDefault(dia, new ArrayList<>())) {
+                    boolean cubreLaFranja = minutosFranja >= c.inicio && minutosFranja < c.fin;
+                    boolean esLaPrimera = c.inicio > minutosFranja - MINUTOS_POR_FRANJA;
+                    if (cubreLaFranja && esLaPrimera) {
+                        cursosQueEmpiezanAqui.add(c);
                     }
                 }
 
-                int enUso = contarLicenciasEnUso(dia, hora);
+                int enUso = 0;
+                for (int[] rango : usoPorDia.getOrDefault(dia, new ArrayList<>())) {
+                    if (minutosFranja >= rango[0] && minutosFranja < rango[1]) {
+                        enUso++;
+                    }
+                }
                 double ocupacion = totalLicencias == 0 ? 0 : (double) enUso / totalLicencias;
                 if (ocupacion > picoOcupacion) {
                     picoOcupacion = ocupacion;
@@ -77,7 +119,7 @@ public class CalendarioController {
                     picoUso = enUso;
                 }
 
-                VBox celda = construirCelda(cursosEnCelda, ocupacion);
+                VBox celda = construirCelda(cursosQueEmpiezanAqui, ocupacion);
                 grillaCalendario.add(celda, col + 1, fila + 1);
             }
         }
@@ -85,19 +127,8 @@ public class CalendarioController {
         mostrarResumen(Math.max(picoOcupacion, 0), picoDia, picoHora, picoUso, totalLicencias);
     }
 
-    private int contarLicenciasEnUso(String dia, String hora) {
-        List<Asignacion> asignaciones = asignacionDAO.obtenerAsignacionesPorDia(dia);
-        int contador = 0;
-        for (Asignacion a : asignaciones) {
-            if (HorarioUtil.incluyeHora(a.getHoraInicio(), a.getHoraFin(), hora)) {
-                contador++;
-            }
-        }
-        return contador;
-    }
-
-    private VBox construirCelda(List<Curso> cursosEnCelda, double ocupacion) {
-        VBox celda = new VBox(2);
+    private VBox construirCelda(List<CursoEnMinutos> cursosQueEmpiezanAqui, double ocupacion) {
+        VBox celda = new VBox(1);
         celda.getStyleClass().add("calendario-celda");
         if (ocupacion > UMBRAL_ALTA) {
             celda.getStyleClass().add("celda-alta");
@@ -107,11 +138,13 @@ public class CalendarioController {
             celda.getStyleClass().add("celda-normal");
         }
 
-        for (Curso c : cursosEnCelda) {
-            Label etiquetaCurso = new Label(c.getNombreMateria() + " · " + c.getLicenciasRequeridas() + " lic.");
-            etiquetaCurso.getStyleClass().add("calendario-curso");
-            etiquetaCurso.setWrapText(true);
-            celda.getChildren().add(etiquetaCurso);
+        for (CursoEnMinutos c : cursosQueEmpiezanAqui) {
+            Label nombre = new Label(c.curso.getNombreMateria() + " · " + c.curso.getLicenciasRequeridas() + " lic.");
+            nombre.getStyleClass().add("calendario-curso");
+            nombre.setWrapText(true);
+            Label horario = new Label(c.curso.getHoraInicio() + " - " + c.curso.getHoraFin());
+            horario.getStyleClass().add("calendario-curso-horario");
+            celda.getChildren().addAll(nombre, horario);
         }
         return celda;
     }

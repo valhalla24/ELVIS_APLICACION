@@ -1,6 +1,9 @@
 package co.edu.usc.elvis.dao;
 
+import co.edu.usc.elvis.util.Configuracion;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -8,29 +11,97 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Una sola conexion a SQLite, abierta una vez y reutilizada en todo el programa.
+ *
+ * Antes cada consulta abria y cerraba su propia conexion (y repetia los PRAGMA),
+ * lo que hacia lenta cada pantalla. Los DAO siguen escribiendo
+ * try (Connection conn = ConexionBD.obtenerConexion(); ...), pero lo que reciben
+ * es una "fachada" cuyo close() no hace nada: la conexion real se cierra sola al
+ * terminar el programa.
+ *
+ * La base vive en la carpeta de datos (ver Configuracion), no dentro del programa.
+ */
 public class ConexionBD {
 
-    private static final String CARPETA_BD = "C:/Users/Public/ElvisAccountManager";
-    private static final String URL_BD = "jdbc:sqlite:" + CARPETA_BD + "/elvis.db";
+    /** Carpeta que usaban las versiones anteriores; si hay una base ahi, se copia a la carpeta nueva. */
+    private static final String CARPETA_ANTIGUA = "C:/Users/Public/ElvisAccountManager";
 
-    private static Connection conexion;
+    private static Connection conexionReal;
+    private static Connection fachada;
 
     private ConexionBD() {
     }
 
-    public static Connection obtenerConexion() throws SQLException {
-        if (conexion == null || conexion.isClosed()) {
-            new File(CARPETA_BD).mkdirs();
-            conexion = DriverManager.getConnection(URL_BD);
-            try (Statement stmt = conexion.createStatement()) {
+    public static synchronized Connection obtenerConexion() throws SQLException {
+        if (conexionReal == null || conexionReal.isClosed()) {
+            File carpeta = Configuracion.carpetaDatos();
+            carpeta.mkdirs();
+            migrarBaseAntiguaSiHaceFalta(carpeta);
+
+            conexionReal = DriverManager.getConnection("jdbc:sqlite:" + rutaBase(carpeta));
+            try (Statement stmt = conexionReal.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON;");
                 stmt.execute("PRAGMA journal_mode = WAL;");
+                // Si otro profesor esta escribiendo en ese instante, esperar hasta 5 s en vez de fallar.
+                stmt.execute("PRAGMA busy_timeout = 5000;");
             }
+            final Connection paraCerrar = conexionReal;
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    paraCerrar.close();
+                } catch (SQLException e) {
+                    // al salir del programa no hay nada mas que hacer
+                }
+            }));
+            fachada = crearFachada(conexionReal);
         }
-        return conexion;
+        return fachada;
+    }
+
+    private static String rutaBase(File carpeta) {
+        return new File(carpeta, "elvis.db").getPath().replace('\\', '/');
+    }
+
+    private static Connection crearFachada(final Connection real) {
+        return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                new Class<?>[]{Connection.class},
+                (proxy, metodo, args) -> {
+                    if (metodo.getName().equals("close")) {
+                        return null; // se ignora: la conexion se reutiliza
+                    }
+                    try {
+                        return metodo.invoke(real, args);
+                    } catch (InvocationTargetException e) {
+                        throw e.getCause();
+                    }
+                });
+    }
+
+    /**
+     * Si la carpeta nueva todavia no tiene base de datos y la carpeta antigua si,
+     * la copia (VACUUM INTO hace una copia consistente, incluso con modo WAL).
+     * La base antigua NO se borra: hay que eliminarla a mano cuando se confirme que todo funciona.
+     */
+    private static void migrarBaseAntiguaSiHaceFalta(File carpetaNueva) {
+        File nueva = new File(carpetaNueva, "elvis.db");
+        File antigua = new File(CARPETA_ANTIGUA, "elvis.db");
+        if (nueva.exists() || !antigua.isFile()) {
+            return;
+        }
+        try (Connection origen = DriverManager.getConnection("jdbc:sqlite:" + antigua.getPath().replace('\\', '/'));
+             Statement stmt = origen.createStatement()) {
+            stmt.execute("VACUUM INTO '" + rutaBase(carpetaNueva).replace("'", "''") + "'");
+            System.out.println("Se copió la base de datos antigua a " + nueva.getAbsolutePath()
+                    + ". Cuando confirmes que todo funciona, borra la carpeta " + CARPETA_ANTIGUA + ".");
+        } catch (SQLException e) {
+            System.err.println("No se pudo copiar la base de datos antigua: " + e.getMessage());
+        }
     }
 
     public static void inicializarBaseDeDatos() {
+        Configuracion.crearPlantillaSiNoExiste();
+
         String sqlCurso = "CREATE TABLE IF NOT EXISTS curso ("
                 + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + "nombre_materia TEXT NOT NULL,"

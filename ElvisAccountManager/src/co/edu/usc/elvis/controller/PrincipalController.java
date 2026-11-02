@@ -12,9 +12,10 @@ import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
 
 public class PrincipalController {
+
+    private static final String RUTA_ESTILOS = "/co/edu/usc/elvis/view/estilos.css";
 
     @FXML private StackPane contenedorVistas;
     @FXML private Button botonInicio;
@@ -39,9 +40,12 @@ public class PrincipalController {
             itemPerfilDatos.setText("Sesión iniciada como\n" + usuario.getNombreUsuario() + " · " + rolLegible);
         }
 
+        // Reportes y Usuarios son solo del administrador.
         boolean esAdmin = SesionActual.esAdministrador();
         botonUsuarios.setVisible(esAdmin);
         botonUsuarios.setManaged(esAdmin);
+        botonReportes.setVisible(esAdmin);
+        botonReportes.setManaged(esAdmin);
 
         mostrarInicio();
     }
@@ -79,6 +83,9 @@ public class PrincipalController {
 
     @FXML
     private void mostrarReportes() {
+        if (!SesionActual.esAdministrador()) {
+            return;
+        }
         cargarVista("/co/edu/usc/elvis/view/Reportes.fxml");
         marcarActivo(botonReportes);
     }
@@ -97,10 +104,13 @@ public class PrincipalController {
         SesionActual.cerrarSesion();
         try {
             Parent raiz = FXMLLoader.load(getClass().getResource("/co/edu/usc/elvis/view/Login.fxml"));
-            Stage stage = (Stage) contenedorVistas.getScene().getWindow();
-            Scene escena = new Scene(raiz, 1200, 750);
-            escena.getStylesheets().add(getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());
-            stage.setScene(escena);
+            // Igual que al entrar: se cambia solo el contenido, la ventana no cambia de tamaño.
+            Scene escena = contenedorVistas.getScene();
+            String estilos = getClass().getResource(RUTA_ESTILOS).toExternalForm();
+            if (!escena.getStylesheets().contains(estilos)) {
+                escena.getStylesheets().add(estilos);
+            }
+            escena.setRoot(raiz);
         } catch (IOException e) {
             System.err.println("No se pudo volver al login: " + e.getMessage());
         }

@@ -25,6 +25,24 @@ public class EstudianteDAO {
         return 0;
     }
 
+    /** Estudiantes que hay en los cursos de un usuario (una sola consulta). */
+    public int contarPorDueno(int usuarioId) {
+        String sql = "SELECT COUNT(*) AS total FROM estudiante e "
+                + "JOIN curso c ON c.id = e.curso_id WHERE c.usuario_id = ?";
+        try (Connection conn = ConexionBD.obtenerConexion();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, usuarioId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("total");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al contar estudiantes del usuario: " + e.getMessage());
+        }
+        return 0;
+    }
+
     public boolean existeCodigoEstudiantil(String codigo) {
         String sql = "SELECT COUNT(*) AS total FROM estudiante WHERE codigo_estudiantil = ?";
         try (Connection conn = ConexionBD.obtenerConexion();

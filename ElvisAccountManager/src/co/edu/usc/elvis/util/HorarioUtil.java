@@ -32,6 +32,7 @@ public class HorarioUtil {
         return i1 < f2 && i2 < f1;
     }
 
+    /** True si horaPunto cae dentro de [inicio, fin). */
     public static boolean incluyeHora(String inicio, String fin, String horaPunto) {
         int i = aMinutos(inicio);
         int f = aMinutos(fin);
@@ -39,15 +40,18 @@ public class HorarioUtil {
         return h >= i && h < f;
     }
 
+    /** Franjas de media hora, de 06:00 a.m. a 10:00 p.m. (se usan en el calendario y en los horarios de los cursos). */
     public static List<String> generarFranjasHorarias() {
         List<String> horas = new ArrayList<>();
-        for (int h = 6; h <= 22; h++) {
-            int hora12 = (h > 12) ? h - 12 : h;
+        for (int minutos = 6 * 60; minutos <= 22 * 60; minutos += 30) {
+            int hora24 = minutos / 60;
+            int minuto = minutos % 60;
+            int hora12 = hora24 > 12 ? hora24 - 12 : hora24;
             if (hora12 == 0) {
                 hora12 = 12;
             }
-            String sufijo = (h < 12) ? "a.m." : "p.m.";
-            horas.add(String.format("%02d:00 %s", hora12, sufijo));
+            String sufijo = hora24 < 12 ? "a.m." : "p.m.";
+            horas.add(String.format("%02d:%02d %s", hora12, minuto, sufijo));
         }
         return horas;
     }

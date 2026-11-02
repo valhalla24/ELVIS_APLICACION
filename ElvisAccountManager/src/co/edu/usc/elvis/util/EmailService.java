@@ -13,27 +13,43 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 /**
- * Arma y envia el correo de notificacion de credenciales a un estudiante,
- * usando JavaMail (la libreria base de Java para SMTP; un solo jar, sin
- * modulos adicionales que configurar).
- *
- * IMPORTANTE: los valores de SMTP_* de aqui abajo son de ejemplo (Gmail).
- * Hay que reemplazarlos por la cuenta real que va a enviar los correos:
- *  - SMTP_USUARIO: la direccion de correo que enviara (aparece como remitente)
- *  - SMTP_CLAVE: su contraseña de aplicacion (NO la contraseña normal de la cuenta;
- *    Gmail exige generar una "contraseña de aplicacion" en la configuracion de seguridad)
- *  - Si en vez de Gmail usan un correo institucional con su propio servidor SMTP,
- *    SMTP_HOST y SMTP_PUERTO cambian (DTSI deberia poder dar esos datos).
+ * Envia el correo con las credenciales. La cuenta que envia (servidor, puerto,
+ * usuario y clave) NO esta en el codigo: se lee de config.properties, en la
+ * carpeta de datos, cada vez que se envia.
  */
 public class EmailService {
 
-    private static final String SMTP_HOST = "smtp.gmail.com";
-    private static final int SMTP_PUERTO = 587;
-    private static final String SMTP_USUARIO = "reemplazar@gmail.com";
-    private static final String SMTP_CLAVE = "reemplazar_contrasena_de_aplicacion";
-    private static final String REMITENTE_NOMBRE = "Servidor ELVIS - USC";
+    private static final int TIEMPO_MAXIMO_MS = 15000;
+
+    /** True si config.properties ya tiene el usuario y la clave del correo. */
+    public boolean estaConfigurado() {
+        Properties cfg = Configuracion.cargar();
+        return !Configuracion.texto(cfg, "correo.usuario", "").isEmpty()
+                && !Configuracion.texto(cfg, "correo.clave", "").isEmpty();
+    }
+
+    public String mensajeSinConfigurar() {
+        return "El correo todavía no está configurado. Abre el archivo "
+                + Configuracion.archivoConfiguracion().getAbsolutePath()
+                + " con el Bloc de notas y completa correo.usuario y correo.clave.";
+    }
 
     public void enviarCredenciales(AsignacionDetalle asignacion) throws MessagingException {
+        Properties cfg = Configuracion.cargar();
+        final String usuario = Configuracion.texto(cfg, "correo.usuario", "");
+        final String clave = Configuracion.texto(cfg, "correo.clave", "");
+        if (usuario.isEmpty() || clave.isEmpty()) {
+            throw new MessagingException(mensajeSinConfigurar());
+        }
+        String servidor = Configuracion.texto(cfg, "correo.servidor", "smtp.gmail.com");
+        int puerto = 587;
+        try {
+            puerto = Integer.parseInt(Configuracion.texto(cfg, "correo.puerto", "587"));
+        } catch (NumberFormatException e) {
+            throw new MessagingException("correo.puerto debe ser un número (por ejemplo 587).");
+        }
+        String nombreRemitente = Configuracion.texto(cfg, "correo.remitente", "Servidor ELVIS - USC");
+
         String asunto = "Acceso al Servidor ELVIS - " + asignacion.getCursoNombre();
 
         String cuerpo = "Hola " + asignacion.getEstudianteNombre() + ",\n\n"
@@ -55,20 +71,28 @@ public class EmailService {
 
         Properties propiedades = new Properties();
         propiedades.put("mail.smtp.auth", "true");
-        propiedades.put("mail.smtp.starttls.enable", "true");
-        propiedades.put("mail.smtp.host", SMTP_HOST);
-        propiedades.put("mail.smtp.port", String.valueOf(SMTP_PUERTO));
+        propiedades.put("mail.smtp.host", servidor);
+        propiedades.put("mail.smtp.port", String.valueOf(puerto));
+        if (puerto == 465) {
+            propiedades.put("mail.smtp.ssl.enable", "true");
+        } else {
+            propiedades.put("mail.smtp.starttls.enable", "true");
+        }
+        // Sin tiempos maximos, un servidor que no responde dejaria colgado el envio.
+        propiedades.put("mail.smtp.connectiontimeout", String.valueOf(TIEMPO_MAXIMO_MS));
+        propiedades.put("mail.smtp.timeout", String.valueOf(TIEMPO_MAXIMO_MS));
+        propiedades.put("mail.smtp.writetimeout", String.valueOf(TIEMPO_MAXIMO_MS));
 
         Session sesion = Session.getInstance(propiedades, new Authenticator() {
             @Override
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(SMTP_USUARIO, SMTP_CLAVE);
+                return new PasswordAuthentication(usuario, clave);
             }
         });
 
         try {
             MimeMessage mensaje = new MimeMessage(sesion);
-            mensaje.setFrom(new InternetAddress(SMTP_USUARIO, REMITENTE_NOMBRE));
+            mensaje.setFrom(new InternetAddress(usuario, nombreRemitente));
             mensaje.setRecipients(Message.RecipientType.TO,
                     InternetAddress.parse(asignacion.getEstudianteCorreo()));
             mensaje.setSubject(asunto);

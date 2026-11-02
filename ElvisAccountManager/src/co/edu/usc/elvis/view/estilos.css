@@ -322,8 +322,8 @@
 }
 .calendario-celda {
     -fx-min-width: 140;
-    -fx-min-height: 46;
-    -fx-padding: 5;
+    -fx-min-height: 36;
+    -fx-padding: 4 5 4 5;
     -fx-background-color: white;
     -fx-border-color: #e2e5ec;
     -fx-border-width: 1;
@@ -331,7 +331,8 @@
 .celda-normal { -fx-background-color: #e8f7ee; }
 .celda-moderada { -fx-background-color: #fff6dd; }
 .celda-alta { -fx-background-color: #fbe4e1; -fx-border-color: #c0392b; -fx-border-width: 1.5; }
-.calendario-curso { -fx-font-size: 11.5px; -fx-text-fill: #1c2b4a; }
+.calendario-curso { -fx-font-size: 11.5px; -fx-font-weight: bold; -fx-text-fill: #1c2b4a; }
+.calendario-curso-horario { -fx-font-size: 11px; -fx-text-fill: #5a6577; }
 .alerta-cupo {
     -fx-background-color: #fbe4e1;
     -fx-text-fill: #a5281b;

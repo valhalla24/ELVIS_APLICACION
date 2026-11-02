@@ -24,22 +24,16 @@
 
             <VBox spacing="16" maxWidth="1100" prefWidth="1100">
 
-                <Label text="Sigue los 4 pasos en orden. Cada uno muestra cómo va; haz clic en un paso para abrirlo."
-                       styleClass="texto-ayuda" wrapText="true"/>
-
-                <!-- ============ PASO 1: LICENCIAS ============ -->
-                <TitledPane fx:id="panelCargarLicencias" text="Paso 1 · Licencias"
+                <!-- ============ LICENCIAS (solo administrador) ============ -->
+                <TitledPane fx:id="panelCargarLicencias" text="Licencias"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="10">
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
-                            <Label text="Las licencias son las cuentas de acceso del servidor. El administrador las carga con un Excel de tres columnas: Usuario, Contraseña e IP. Si el usuario ya existe, se actualiza; si no, se crea."
+                            <Label text="Las licencias son las cuentas de acceso del servidor. Se cargan con un Excel de tres columnas: Usuario, Contraseña e IP. Si el usuario ya existe, se actualiza; si no, se crea."
                                    styleClass="texto-ayuda" wrapText="true"/>
-                            <Label fx:id="etiquetaAvisoRol" wrapText="true" styleClass="aviso-info"
-                                   text="Solo el administrador puede cargar, modificar o eliminar licencias. Aquí puedes consultarlas."
-                                   managed="false" visible="false"/>
                             <Label fx:id="etiquetaEstadoLicencias" wrapText="true" styleClass="resumen-estado"/>
                             <Button fx:id="botonSeleccionarArchivoLicencias" text="Seleccionar archivo Excel"
                                     onAction="#seleccionarArchivoLicencias" styleClass="boton-secundario" maxWidth="Infinity"/>
@@ -63,15 +57,15 @@
                     </content>
                 </TitledPane>
 
-                <!-- ============ PASO 2: CURSOS ============ -->
-                <TitledPane fx:id="panelRegistrarCurso" text="Paso 2 · Cursos"
+                <!-- ============ CURSOS (solo administrador) ============ -->
+                <TitledPane fx:id="panelRegistrarCurso" text="Cursos"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="12">
                             <padding>
                                 <Insets top="12" bottom="4"/>
                             </padding>
-                            <Label text="Registra cada materia con su día, su horario y cuántas licencias necesita. Para corregir o eliminar un curso usa los botones de la tabla de abajo."
+                            <Label text="Registra cada materia con su día, su horario (en franjas de media hora) y cuántas licencias necesita, y elige el profesor que la administra. Para corregir o eliminar un curso usa los botones de la tabla de abajo."
                                    styleClass="texto-ayuda" wrapText="true"/>
 
                             <Label text="Nombre de la materia" styleClass="etiqueta-campo"/>
@@ -109,10 +103,9 @@
                             <Label text="Cantidad de licencias requeridas" styleClass="etiqueta-campo"/>
                             <Spinner fx:id="spinnerLicencias" editable="true"/>
 
-                            <Label fx:id="etiquetaDuenoCurso" text="Dueño del curso (usuario que lo administra)"
-                                   styleClass="etiqueta-campo" managed="false" visible="false"/>
-                            <ComboBox fx:id="comboDuenoCurso" promptText="Selecciona un usuario..."
-                                      maxWidth="Infinity" managed="false" visible="false"/>
+                            <Label fx:id="etiquetaDuenoCurso" text="Dueño del curso (el profesor que lo administra)"
+                                   styleClass="etiqueta-campo"/>
+                            <ComboBox fx:id="comboDuenoCurso" promptText="Selecciona un usuario..." maxWidth="Infinity"/>
 
                             <Button fx:id="botonCrearCurso" text="Crear y registrar curso" onAction="#registrarCurso"
                                     styleClass="boton-primario" maxWidth="Infinity"/>
@@ -133,8 +126,8 @@
                     </content>
                 </TitledPane>
 
-                <!-- ============ PASO 3: LISTAS DE ESTUDIANTES ============ -->
-                <TitledPane fx:id="panelCargaListas" text="Paso 3 · Listas de estudiantes"
+                <!-- ============ LISTAS DE ESTUDIANTES ============ -->
+                <TitledPane fx:id="panelCargaListas" text="Listas de estudiantes"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="10">
@@ -179,8 +172,8 @@
                     </content>
                 </TitledPane>
 
-                <!-- ============ PASO 4: ASIGNAR Y ENVIAR ============ -->
-                <TitledPane fx:id="panelAsignacion" text="Paso 4 · Asignar y enviar credenciales"
+                <!-- ============ ASIGNAR Y ENVIAR ============ -->
+                <TitledPane fx:id="panelAsignacion" text="Asignar y enviar credenciales"
                             expanded="false" styleClass="panel-colapsable">
                     <content>
                         <VBox spacing="10">

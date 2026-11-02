@@ -18,9 +18,10 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.stage.Stage;
 
 public class LoginController {
+
+    private static final String RUTA_ESTILOS = "/co/edu/usc/elvis/view/estilos.css";
 
     @FXML private TextField campoUsuario;
     @FXML private PasswordField campoContrasena;
@@ -104,10 +105,14 @@ public class LoginController {
 
         try {
             Parent raiz = FXMLLoader.load(getClass().getResource("/co/edu/usc/elvis/view/Principal.fxml"));
-            Stage stage = (Stage) campoUsuario.getScene().getWindow();
-            Scene escena = new Scene(raiz, 1200, 750);
-            escena.getStylesheets().add(getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());
-            stage.setScene(escena);
+            // Se cambia solo el contenido de la ventana (NO se crea una escena nueva):
+            // asi la ventana conserva su tamaño y su estado de pantalla completa.
+            Scene escena = campoUsuario.getScene();
+            String estilos = getClass().getResource(RUTA_ESTILOS).toExternalForm();
+            if (!escena.getStylesheets().contains(estilos)) {
+                escena.getStylesheets().add(estilos);
+            }
+            escena.setRoot(raiz);
         } catch (IOException e) {
             etiquetaError.setText("Error al cargar la aplicación: " + e.getMessage());
         }

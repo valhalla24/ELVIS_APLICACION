@@ -12,6 +12,23 @@ import java.util.List;
 
 public class AsignacionDAO {
 
+    /** Todas las asignaciones de todos los dias en UNA sola consulta (la usa el calendario). */
+    public List<Asignacion> obtenerTodas() {
+        List<Asignacion> lista = new ArrayList<>();
+        String sql = "SELECT id, licencia_id, curso_id, estudiante_id, dia_franja, hora_inicio, hora_fin, notificado "
+                + "FROM asignacion";
+        try (Connection conn = ConexionBD.obtenerConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                lista.add(mapear(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al listar asignaciones: " + e.getMessage());
+        }
+        return lista;
+    }
+
     public List<Asignacion> obtenerAsignacionesPorDia(String dia) {
         List<Asignacion> lista = new ArrayList<>();
         String sql = "SELECT id, licencia_id, curso_id, estudiante_id, dia_franja, hora_inicio, hora_fin, notificado "
