@@ -165,6 +165,7 @@ public class ConexionBD {
                 + "contrasena_hash TEXT NOT NULL,"
                 + "sal TEXT NOT NULL,"
                 + "rol TEXT NOT NULL DEFAULT 'PROFESOR',"
+                + "debe_cambiar_clave INTEGER NOT NULL DEFAULT 0,"
                 + "fecha_creacion TEXT NOT NULL DEFAULT (datetime('now'))"
                 + ");";
 
@@ -182,7 +183,56 @@ public class ConexionBD {
         }
 
         asegurarColumnaDuenoEnCurso();
+        asegurarColumna("usuario_sistema", "debe_cambiar_clave", "INTEGER NOT NULL DEFAULT 0");
         sembrarUsuarioAdminSiEstaVacio();
+        cifrarLicenciasEnTextoPlano();
+        co.edu.usc.elvis.util.Configuracion.protegerSecretos();
+    }
+
+    /** Agrega una columna a una tabla de una base anterior, sin borrar nada. */
+    private static void asegurarColumna(String tabla, String columna, String definicion) {
+        try (Connection conn = obtenerConexion();
+             Statement stmt = conn.createStatement()) {
+            boolean existe = false;
+            try (ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tabla + ")")) {
+                while (rs.next()) {
+                    existe |= columna.equalsIgnoreCase(rs.getString("name"));
+                }
+            }
+            if (!existe) {
+                stmt.execute("ALTER TABLE " + tabla + " ADD COLUMN " + columna + " " + definicion);
+                System.out.println("Se agregó la columna " + columna + " a la tabla " + tabla + ".");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al agregar la columna " + columna + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Las versiones anteriores guardaban las contraseñas de las licencias en
+     * texto plano: se cifran una sola vez al abrir el programa.
+     */
+    private static void cifrarLicenciasEnTextoPlano() {
+        String sql = "SELECT id, contrasena FROM licencia WHERE contrasena NOT LIKE '"
+                + co.edu.usc.elvis.util.CifradoUtil.PREFIJO + "%'";
+        int cifradas = 0;
+        try (Connection conn = obtenerConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql);
+             PreparedStatement ps = conn.prepareStatement("UPDATE licencia SET contrasena = ? WHERE id = ?")) {
+            while (rs.next()) {
+                ps.setString(1, co.edu.usc.elvis.util.CifradoUtil.cifrar(rs.getString("contrasena")));
+                ps.setInt(2, rs.getInt("id"));
+                ps.addBatch();
+                cifradas++;
+            }
+            if (cifradas > 0) {
+                ps.executeBatch();
+                System.out.println("Se cifraron " + cifradas + " contraseña(s) de licencias guardadas en texto plano.");
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al cifrar las contraseñas de las licencias: " + e.getMessage());
+        }
     }
 
     /**
@@ -226,10 +276,11 @@ public class ConexionBD {
             int total = rs.next() ? rs.getInt("total") : 0;
             if (total == 0) {
                 String sal = co.edu.usc.elvis.util.SeguridadUtil.generarSal();
-                String hash = co.edu.usc.elvis.util.SeguridadUtil.hashContrasena("admin123", sal);
+                String hash = co.edu.usc.elvis.util.SeguridadUtil.hashContrasena(
+                        co.edu.usc.elvis.util.SeguridadUtil.CLAVE_INICIAL_ADMIN, sal);
                 String sqlInsertar = "INSERT INTO usuario_sistema "
-                        + "(nombre_completo, nombre_usuario, contrasena_hash, sal, rol) "
-                        + "VALUES (?, ?, ?, ?, 'ADMINISTRADOR')";
+                        + "(nombre_completo, nombre_usuario, contrasena_hash, sal, rol, debe_cambiar_clave) "
+                        + "VALUES (?, ?, ?, ?, 'ADMINISTRADOR', 1)";
                 try (PreparedStatement ps = conn.prepareStatement(sqlInsertar)) {
                     ps.setString(1, "Administrador del Sistema");
                     ps.setString(2, "admin");
@@ -237,7 +288,8 @@ public class ConexionBD {
                     ps.setString(4, sal);
                     ps.executeUpdate();
                 }
-                System.out.println("Usuario administrador inicial creado -> usuario: admin / contraseña: admin123 (cámbiala cuanto antes)");
+                System.out.println("Usuario administrador inicial creado -> usuario: admin / contraseña: admin123 "
+                        + "(el programa pedirá cambiarla en el primer inicio de sesión)");
             }
         } catch (SQLException e) {
             System.err.println("Error al sembrar usuario administrador inicial: " + e.getMessage());

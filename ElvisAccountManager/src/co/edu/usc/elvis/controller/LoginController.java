@@ -1,5 +1,6 @@
 package co.edu.usc.elvis.controller;
 
+import co.edu.usc.elvis.dao.LogAuditoriaDAO;
 import co.edu.usc.elvis.dao.UsuarioDAO;
 import co.edu.usc.elvis.model.Usuario;
 import co.edu.usc.elvis.util.Mensajes;
@@ -7,17 +8,22 @@ import co.edu.usc.elvis.util.SeguridadUtil;
 import co.edu.usc.elvis.util.SesionActual;
 import java.io.IOException;
 import java.net.URL;
+import java.sql.SQLException;
 import javafx.application.Platform;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.GridPane;
 
 public class LoginController {
 
@@ -32,6 +38,7 @@ public class LoginController {
     @FXML private Label etiquetaError;
 
     private final UsuarioDAO usuarioDAO = new UsuarioDAO();
+    private final LogAuditoriaDAO logAuditoriaDAO = new LogAuditoriaDAO();
 
     @FXML
     public void initialize() {
@@ -90,14 +97,29 @@ public class LoginController {
         }
 
         Usuario usuario = usuarioDAO.buscarPorNombreUsuario(nombreUsuario);
-        if (usuario == null) {
+        if (usuario == null || !SeguridadUtil.verificar(contrasena, usuario.getSal(), usuario.getContrasenaHash())) {
             etiquetaError.setText("Usuario o contraseña incorrectos.");
             return;
         }
 
-        String hashIngresado = SeguridadUtil.hashContrasena(contrasena, usuario.getSal());
-        if (!hashIngresado.equals(usuario.getContrasenaHash())) {
-            etiquetaError.setText("Usuario o contraseña incorrectos.");
+        try {
+            // Cuentas de versiones anteriores (SHA-256): se re-guardan con PBKDF2 ahora que se conoce la clave.
+            if (SeguridadUtil.necesitaActualizar(usuario.getContrasenaHash())) {
+                usuarioDAO.actualizarHash(usuario.getId(), contrasena);
+            }
+            // Cuenta nueva, clave restablecida o la clave inicial del sistema: no se entra sin cambiarla.
+            if (usuario.isDebeCambiarClave() || SeguridadUtil.CLAVE_INICIAL_ADMIN.equals(contrasena)) {
+                String nueva = pedirNuevaContrasena(contrasena);
+                if (nueva == null) {
+                    etiquetaError.setText("Debes cambiar la contraseña para entrar.");
+                    return;
+                }
+                usuarioDAO.cambiarContrasenaPropia(usuario.getId(), nueva);
+                logAuditoriaDAO.registrarEvento("usuario_clave_cambiada",
+                        "Cambió su contraseña al iniciar sesión", usuario.getNombreUsuario());
+            }
+        } catch (SQLException e) {
+            etiquetaError.setText("No se pudo guardar la contraseña: " + e.getMessage());
             return;
         }
 
@@ -116,5 +138,37 @@ public class LoginController {
         } catch (IOException e) {
             etiquetaError.setText("Error al cargar la aplicación: " + e.getMessage());
         }
+    }
+
+    /** Pide la contraseña nueva dos veces; devuelve null si el usuario cancela. */
+    private String pedirNuevaContrasena(String actual) {
+        Dialog<ButtonType> dialogo = new Dialog<>();
+        dialogo.setTitle("Cambiar contraseña");
+        dialogo.setHeaderText("Por seguridad, elige una contraseña nueva antes de continuar.");
+        if (campoUsuario.getScene() != null) {
+            dialogo.initOwner(campoUsuario.getScene().getWindow());
+        }
+        PasswordField nueva = new PasswordField();
+        PasswordField confirmacion = new PasswordField();
+        Label error = new Label();
+        error.getStyleClass().add("mensaje-error");
+        error.setWrapText(true);
+        GridPane grilla = new GridPane();
+        grilla.setHgap(10);
+        grilla.setVgap(10);
+        grilla.addRow(0, new Label("Nueva contraseña (mínimo " + SeguridadUtil.LARGO_MINIMO + " caracteres):"), nueva);
+        grilla.addRow(1, new Label("Repítela:"), confirmacion);
+        grilla.add(error, 0, 2, 2, 1);
+        dialogo.getDialogPane().setContent(grilla);
+        dialogo.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialogo.getDialogPane().lookupButton(ButtonType.OK).addEventFilter(ActionEvent.ACTION, evento -> {
+            String motivo = SeguridadUtil.validarNuevaContrasena(nueva.getText(), confirmacion.getText(), actual);
+            if (motivo != null) {
+                error.setText(motivo);
+                evento.consume();   // el dialogo sigue abierto hasta que la clave sea valida
+            }
+        });
+        Platform.runLater(nueva::requestFocus);
+        return dialogo.showAndWait().filter(b -> b == ButtonType.OK).map(b -> nueva.getText()).orElse(null);
     }
 }

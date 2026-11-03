@@ -318,6 +318,7 @@ public class ReporteService {
             case "usuario_creado": return "Usuario creado";
             case "usuario_rol_cambiado": return "Cambio de rol";
             case "usuario_clave_restablecida": return "Contraseña restablecida";
+            case "usuario_clave_cambiada": return "Contraseña cambiada por el usuario";
             case "usuario_eliminado": return "Usuario eliminado";
             case "reporte_exportado": return "Reporte exportado";
             default: return accion;

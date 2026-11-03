@@ -11,6 +11,7 @@ public class Usuario {
     private String contrasenaHash;
     private String sal;
     private String rol;
+    private boolean debeCambiarClave;
 
     public Usuario() {
     }
@@ -27,6 +28,9 @@ public class Usuario {
     public void setSal(String sal) { this.sal = sal; }
     public String getRol() { return rol; }
     public void setRol(String rol) { this.rol = rol; }
+    /** True si debe elegir una contraseña nueva al iniciar sesión (cuenta nueva o clave restablecida). */
+    public boolean isDebeCambiarClave() { return debeCambiarClave; }
+    public void setDebeCambiarClave(boolean debeCambiarClave) { this.debeCambiarClave = debeCambiarClave; }
 
     public boolean esAdministrador() {
         return ROL_ADMINISTRADOR.equals(rol);

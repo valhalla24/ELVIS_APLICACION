@@ -12,9 +12,11 @@ import java.util.List;
 
 public class UsuarioDAO {
 
+    private static final String COLUMNAS =
+            "SELECT id, nombre_completo, nombre_usuario, contrasena_hash, sal, rol, debe_cambiar_clave FROM usuario_sistema ";
+
     public Usuario buscarPorNombreUsuario(String nombreUsuario) {
-        String sql = "SELECT id, nombre_completo, nombre_usuario, contrasena_hash, sal, rol "
-                + "FROM usuario_sistema WHERE nombre_usuario = ?";
+        String sql = COLUMNAS + "WHERE nombre_usuario = ?";
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, nombreUsuario);
@@ -35,8 +37,7 @@ public class UsuarioDAO {
 
     public List<Usuario> obtenerTodos() {
         List<Usuario> lista = new ArrayList<>();
-        String sql = "SELECT id, nombre_completo, nombre_usuario, contrasena_hash, sal, rol "
-                + "FROM usuario_sistema ORDER BY nombre_completo";
+        String sql = COLUMNAS + "ORDER BY nombre_completo";
         try (Connection conn = ConexionBD.obtenerConexion();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -49,12 +50,13 @@ public class UsuarioDAO {
         return lista;
     }
 
+    /** La contraseña la elige el administrador, asi que el usuario debe cambiarla al entrar por primera vez. */
     public void crearUsuario(String nombreCompleto, String nombreUsuario, String contrasenaPlano, String rol)
             throws SQLException {
         String sal = SeguridadUtil.generarSal();
         String hash = SeguridadUtil.hashContrasena(contrasenaPlano, sal);
-        String sql = "INSERT INTO usuario_sistema (nombre_completo, nombre_usuario, contrasena_hash, sal, rol) "
-                + "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO usuario_sistema (nombre_completo, nombre_usuario, contrasena_hash, sal, rol, debe_cambiar_clave) "
+                + "VALUES (?, ?, ?, ?, ?, 1)";
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, nombreCompleto);
@@ -76,10 +78,27 @@ public class UsuarioDAO {
         }
     }
 
+    /** El administrador pone una clave temporal: el usuario debe cambiarla al entrar. */
     public void restablecerContrasena(int id, String nuevaContrasenaPlano) throws SQLException {
+        guardarContrasena(id, nuevaContrasenaPlano, true);
+    }
+
+    /** El propio usuario elige su contraseña (o se re-guarda la misma con el algoritmo actual). */
+    public void cambiarContrasenaPropia(int id, String nuevaContrasenaPlano) throws SQLException {
+        guardarContrasena(id, nuevaContrasenaPlano, false);
+    }
+
+    /** Re-guarda la misma contraseña con el algoritmo actual sin tocar la marca de cambio obligatorio. */
+    public void actualizarHash(int id, String contrasenaPlano) throws SQLException {
+        guardarContrasena(id, contrasenaPlano, null);
+    }
+
+    private void guardarContrasena(int id, String contrasenaPlano, Boolean debeCambiar) throws SQLException {
         String sal = SeguridadUtil.generarSal();
-        String hash = SeguridadUtil.hashContrasena(nuevaContrasenaPlano, sal);
-        String sql = "UPDATE usuario_sistema SET contrasena_hash = ?, sal = ? WHERE id = ?";
+        String hash = SeguridadUtil.hashContrasena(contrasenaPlano, sal);
+        String sql = "UPDATE usuario_sistema SET contrasena_hash = ?, sal = ?"
+                + (debeCambiar == null ? "" : ", debe_cambiar_clave = " + (debeCambiar ? 1 : 0))
+                + " WHERE id = ?";
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, hash);
@@ -114,6 +133,7 @@ public class UsuarioDAO {
         u.setContrasenaHash(rs.getString("contrasena_hash"));
         u.setSal(rs.getString("sal"));
         u.setRol(rs.getString("rol"));
+        u.setDebeCambiarClave(rs.getInt("debe_cambiar_clave") == 1);
         return u;
     }
 }

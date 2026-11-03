@@ -45,7 +45,11 @@ Aplicación de escritorio que centraliza la asignación de las cuentas de acceso
 | **Administrador** | Todo: cursos de todos los profesores, usuarios, licencias, reenvíos y bitácora de auditoría. |
 | **Profesor** | Solo los cursos de los que es dueño: carga sus listas, asigna y envía sus correos. |
 
-Las contraseñas de los usuarios del sistema se guardan como hash SHA-256 con sal aleatoria.
+**Seguridad de los datos guardados**
+
+- Las contraseñas de los usuarios del sistema se guardan con **PBKDF2-HMAC-SHA256** (600.000 iteraciones y sal aleatoria). Las cuentas de versiones anteriores (SHA-256) se convierten solas al iniciar sesión.
+- Las contraseñas de las licencias y la clave del correo se guardan **cifradas con AES-256-GCM**. La llave está en `elvis.key`.
+- Las cuentas nuevas, las claves restablecidas por el administrador y el administrador inicial (`admin123`) **deben elegir una contraseña nueva** antes de entrar.
 
 ---
 
@@ -119,7 +123,7 @@ java --module-path $fx --add-modules javafx.controls,javafx.fxml -cp "$out;$cp" 
    |---|---|
    | `admin` | `admin123` |
 
-   > ⚠️ **Cambiar esta contraseña de inmediato** en **Usuarios → Restablecer Clave**.
+   Al entrar, la aplicación **obliga a elegir una contraseña nueva** (mínimo 8 caracteres, distinta de `admin123`). Si se cancela, no se entra.
 3. Crear las cuentas de los profesores en **Usuarios**.
 4. Configurar el correo (ver la siguiente sección).
 5. En **Administrar Cuentas**:
@@ -174,7 +178,9 @@ Microsoft está retirando el envío con usuario y contraseña. Si la clave es co
 
 Si el envío falla, el mensaje en pantalla indica qué corregir (por ejemplo, *"revisa que correo.clave sea la clave vigente del buzón"*).
 
-> 🔒 `config.properties` contiene la clave del correo: no lo subas al repositorio ni lo compartas.
+La clave se escribe tal cual en `correo.clave` (lo mismo para `correo.oauth.cliente_secreto`). Al abrir la aplicación, o antes del siguiente envío, la línea se reemplaza sola por una versión cifrada que empieza por `enc:v1:`. Para cambiar la clave basta con volver a escribirla en claro.
+
+> 🔒 No subas `config.properties` ni `elvis.key` al repositorio ni los compartas.
 
 ---
 
@@ -207,12 +213,33 @@ En la raíz del repositorio hay dos archivos de ejemplo: `licencias server ELVIS
 | Archivo | Contenido |
 |---|---|
 | `C:\ElvisData\elvis.db` | Base de datos SQLite: cursos, estudiantes, licencias, asignaciones, usuarios y bitácora. |
-| `C:\ElvisData\config.properties` | Configuración del correo. |
+| `C:\ElvisData\config.properties` | Configuración del correo (clave cifrada). |
+| `C:\ElvisData\elvis.key` | Llave de cifrado de las contraseñas de licencias y de la clave del correo. Se crea sola la primera vez. |
 
 - **Cambiar la carpeta:** usar `-Delvis.datos=RUTA` al ejecutar Java, o la variable de entorno `ELVIS_DATOS`.
 - **Permisos:** la carpeta debe ser accesible solo para los profesores y el técnico, nunca para las cuentas de estudiantes, porque contiene las contraseñas de las licencias.
-- **Respaldo:** copiar la carpeta completa con la aplicación cerrada.
+- **Respaldo:** copiar la carpeta completa con la aplicación cerrada, **incluida `elvis.key`**. Sin la llave, las contraseñas de las licencias y la clave del correo no se pueden recuperar (habría que volver a cargar el Excel de licencias y escribir la clave del correo).
+- **Llave en otra carpeta:** para que una copia de la carpeta de datos no incluya la llave, se puede guardar aparte con `-Delvis.llave=RUTA` o la variable de entorno `ELVIS_LLAVE`, en una carpeta con permisos más estrictos.
 - **Migración:** si existe una base de una versión anterior en `C:\Users\Public\ElvisAccountManager`, se copia sola a la carpeta nueva. La antigua no se borra.
+
+---
+
+## Pruebas
+
+`pruebas/` contiene 51 casos que se ejecutan sobre las pantallas, servicios y DAO reales, con una base temporal (no toca `C:\ElvisData`):
+
+| Grupo | Casos | Qué comprueba |
+|---|---|---|
+| Calendario (CAL) | 9 | Ocupación por franja, niveles normal / moderada / alta, fin de horario exclusivo, alerta y pico. |
+| Reportes (REP) | 9 | Los cuatro reportes, alcance por rol, rango de fechas, exportación a PDF y Excel sin contraseñas. |
+| Restricción por rol (ROL) | 9 | Menú y secciones visibles, cursos y asignaciones de cada profesor, acciones bloqueadas aunque se invoquen directamente. |
+| Seguridad (SEG) | 24 | Cifrado de licencias y del correo, migración de datos antiguos, PBKDF2, cambio obligatorio de clave e inicio de sesión. |
+
+```powershell
+powershell -ExecutionPolicy Bypass -File pruebas\correr_pruebas.ps1
+```
+
+Requiere un JDK 20+ en el `PATH` o en `JAVA_HOME`. Abre por un momento la ventana de inicio de sesión.
 
 ---
 
@@ -243,6 +270,7 @@ El proyecto sigue el patrón **MVC**: las vistas FXML, los controladores que ati
 | `NoClassDefFoundError: javax/activation/DataHandler` al enviar | Falta `jar_files/javax.activation-1.2.0.jar` en el classpath. Actualizar el repositorio y hacer *Clean and Build*. |
 | `535 5.7.3 Authentication unsuccessful` | Clave incorrecta o vencida (revisar primero `correo.clave`), SMTP autenticado apagado en el buzón o autenticación básica bloqueada. En este último caso, pasar a `oauth2`. |
 | `5.7.139` / *basic authentication is disabled* | El tenant bloquea usuario y contraseña: pasar a `oauth2`. |
+| *"No se pudo descifrar un dato guardado"* | `elvis.key` no corresponde a la base (se reemplazó o se perdió). Restaurar la llave del respaldo; si no existe, volver a cargar las licencias y escribir la clave del correo. |
 | *"El correo todavía no está configurado"* | Completar `correo.usuario` y `correo.clave` (o los datos `correo.oauth.*`) en `config.properties`. |
 | *"No hay licencias libres en ese horario"* | Todas las licencias están ocupadas por otros cursos en esa franja. Cargar más licencias o mover el horario. |
 | Git no puede actualizar un `.jar` | La aplicación está abierta y tiene el archivo en uso. Cerrarla antes de `git pull`. |

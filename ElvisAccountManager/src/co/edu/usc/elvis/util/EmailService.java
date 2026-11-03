@@ -67,13 +67,14 @@ public class EmailService {
     }
 
     public void enviarCredenciales(AsignacionDetalle asignacion) throws MessagingException {
+        Configuracion.protegerSecretos();
         Properties cfg = Configuracion.cargar();
         if (!estaConfigurado()) {
             throw new MessagingException(mensajeSinConfigurar());
         }
         final String usuario = Configuracion.texto(cfg, "correo.usuario", "");
         final boolean oauth = usaOauth(cfg);
-        final String clave = oauth ? obtenerTokenMicrosoft(cfg) : Configuracion.texto(cfg, "correo.clave", "");
+        final String clave = oauth ? obtenerTokenMicrosoft(cfg) : Configuracion.secreto(cfg, "correo.clave");
         String nombreRemitente = Configuracion.texto(cfg, "correo.remitente", "Servidor ELVIS - USC");
 
         String asunto = "Acceso al Servidor ELVIS - " + asignacion.getCursoNombre();
@@ -149,7 +150,7 @@ public class EmailService {
     private static synchronized String obtenerTokenMicrosoft(Properties cfg) throws MessagingException {
         String tenant = Configuracion.texto(cfg, "correo.oauth.tenant", "");
         String clienteId = Configuracion.texto(cfg, "correo.oauth.cliente_id", "");
-        String secreto = Configuracion.texto(cfg, "correo.oauth.cliente_secreto", "");
+        String secreto = Configuracion.secreto(cfg, "correo.oauth.cliente_secreto");
         String clave = tenant + "|" + clienteId + "|" + secreto;
         if (tokenOauth != null && clave.equals(tokenClave) && System.currentTimeMillis() < tokenVenceMs) {
             return tokenOauth;
