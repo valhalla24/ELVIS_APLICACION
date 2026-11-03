@@ -26,15 +26,14 @@ import javax.mail.internet.MimeMessage;
  * Envia el correo con las credenciales. La cuenta que envia NO esta en el
  * codigo: se lee de config.properties, en la carpeta de datos, cada vez que se envia.
  *
- * correo.proveedor elige los valores por defecto del servidor:
- *   gmail     -> smtp.gmail.com:587, con "contraseña de aplicación" de Google.
- *   office365 -> smtp.office365.com:587. Microsoft ya no acepta usuario y clave
- *                en la mayoria de cuentas; ahi se usa correo.autenticacion=oauth2
- *                con una aplicacion registrada en Entra ID (ver el manual).
- *   otro      -> se usan correo.servidor y correo.puerto tal cual.
+ * Se envia por Microsoft 365 (smtp.office365.com:587 con STARTTLS), con la clave
+ * del buzon o, si la cuenta ya no acepta usuario y clave, con
+ * correo.autenticacion=oauth2 y una aplicacion registrada en Entra ID (ver el manual).
  */
 public class EmailService {
 
+    private static final String SERVIDOR = "smtp.office365.com";
+    private static final int PUERTO = 587;
     private static final int TIEMPO_MAXIMO_MS = 15000;
 
     /** Token de Microsoft reutilizado entre envios hasta poco antes de vencer (dura ~1 h). */
@@ -60,7 +59,7 @@ public class EmailService {
         return "El correo todavía no está configurado. Abre el archivo "
                 + Configuracion.archivoConfiguracion().getAbsolutePath()
                 + " con el Bloc de notas y completa correo.usuario y correo.clave"
-                + " (o, para Office 365 con oauth2, los datos correo.oauth.*).";
+                + " (o, con correo.autenticacion=oauth2, los datos correo.oauth.*).";
     }
 
     private static boolean usaOauth(Properties cfg) {
@@ -73,18 +72,6 @@ public class EmailService {
             throw new MessagingException(mensajeSinConfigurar());
         }
         final String usuario = Configuracion.texto(cfg, "correo.usuario", "");
-        String proveedor = Configuracion.texto(cfg, "correo.proveedor", "gmail").toLowerCase();
-        String servidorPorDefecto = proveedor.equals("office365") ? "smtp.office365.com" : "smtp.gmail.com";
-        String servidor = Configuracion.texto(cfg, "correo.servidor", servidorPorDefecto);
-        if (proveedor.equals("office365") && servidor.equals("smtp.gmail.com")) {
-            servidor = "smtp.office365.com"; // plantilla vieja con el servidor de Gmail escrito
-        }
-        int puerto = 587;
-        try {
-            puerto = Integer.parseInt(Configuracion.texto(cfg, "correo.puerto", "587"));
-        } catch (NumberFormatException e) {
-            throw new MessagingException("correo.puerto debe ser un número (por ejemplo 587).");
-        }
         final boolean oauth = usaOauth(cfg);
         final String clave = oauth ? obtenerTokenMicrosoft(cfg) : Configuracion.texto(cfg, "correo.clave", "");
         String nombreRemitente = Configuracion.texto(cfg, "correo.remitente", "Servidor ELVIS - USC");
@@ -110,14 +97,10 @@ public class EmailService {
 
         Properties propiedades = new Properties();
         propiedades.put("mail.smtp.auth", "true");
-        propiedades.put("mail.smtp.host", servidor);
-        propiedades.put("mail.smtp.port", String.valueOf(puerto));
-        if (puerto == 465) {
-            propiedades.put("mail.smtp.ssl.enable", "true");
-        } else {
-            propiedades.put("mail.smtp.starttls.enable", "true");
-            propiedades.put("mail.smtp.starttls.required", "true");
-        }
+        propiedades.put("mail.smtp.host", SERVIDOR);
+        propiedades.put("mail.smtp.port", String.valueOf(PUERTO));
+        propiedades.put("mail.smtp.starttls.enable", "true");
+        propiedades.put("mail.smtp.starttls.required", "true");
         propiedades.put("mail.smtp.ssl.protocols", "TLSv1.2 TLSv1.3");
         if (oauth) {
             // XOAUTH2: javax.mail manda el token de Microsoft en lugar de la clave.
@@ -146,26 +129,20 @@ public class EmailService {
         } catch (UnsupportedEncodingException e) {
             throw new MessagingException("Error al construir el remitente: " + e.getMessage(), e);
         } catch (AuthenticationFailedException e) {
-            throw new MessagingException(explicarRechazo(servidor, oauth, e.getMessage()), e);
+            throw new MessagingException(explicarRechazo(oauth, e.getMessage()), e);
         }
     }
 
-    /** Traduce el rechazo del servidor a lo que hay que corregir en config.properties. */
-    private static String explicarRechazo(String servidor, boolean oauth, String detalle) {
+    /** Traduce el rechazo de Microsoft 365 a lo que hay que corregir en config.properties. */
+    private static String explicarRechazo(boolean oauth, String detalle) {
         String d = detalle == null ? "" : detalle;
-        if (servidor.contains("gmail")) {
-            return "Gmail rechazó el usuario o la clave. Usa una \"contraseña de aplicación\" de Google "
-                    + "(no la clave normal de la cuenta). Detalle: " + d;
+        if (!oauth) {
+            return "Microsoft 365 rechazó el usuario y la clave. Revisa que correo.clave sea la clave vigente del buzón; "
+                    + "si lo es, la cuenta no permite este tipo de acceso: activa \"SMTP autenticado\" en el buzón "
+                    + "o usa correo.autenticacion=oauth2. Detalle: " + d;
         }
-        if (servidor.contains("office365") || servidor.contains("outlook")) {
-            if (!oauth) {
-                return "Microsoft 365 rechazó el usuario y la clave. Lo más probable es que la cuenta ya no permita "
-                        + "este tipo de acceso: usa correo.autenticacion=oauth2. Detalle: " + d;
-            }
-            return "Microsoft 365 rechazó el acceso con OAuth. Revisa que SMTP autenticado esté activo en el buzón "
-                    + "y que la aplicación tenga permiso sobre él (manual, paso de Exchange). Detalle: " + d;
-        }
-        return "El servidor de correo rechazó el usuario o la clave. Detalle: " + d;
+        return "Microsoft 365 rechazó el acceso con OAuth. Revisa que SMTP autenticado esté activo en el buzón "
+                + "y que la aplicación tenga permiso sobre él (manual, paso de Exchange). Detalle: " + d;
     }
 
     /** Pide (o reutiliza) un token de Microsoft con el flujo client credentials. */

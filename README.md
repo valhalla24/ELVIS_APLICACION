@@ -57,7 +57,7 @@ Las contraseñas de los usuarios del sistema se guardan como hash SHA-256 con sa
 | Interfaz | JavaFX 20 (FXML + CSS) |
 | Base de datos | SQLite (`sqlite-jdbc` 3.53) |
 | Lectura y exportación Excel | Apache POI 5.2.3 |
-| Correo | JavaMail 1.6.2 + JavaBeans Activation 1.2.0 (SMTP con STARTTLS / SSL, OAuth2 para Office 365) |
+| Correo | JavaMail 1.6.2 + JavaBeans Activation 1.2.0 (Microsoft 365 por SMTP con STARTTLS, con contraseña u OAuth2) |
 | Construcción | Apache Ant (proyecto NetBeans) |
 
 Todas las librerías vienen incluidas en `jar_files/`, así que no hace falta descargar nada aparte.
@@ -132,45 +132,30 @@ java --module-path $fx --add-modules javafx.controls,javafx.fxml -cp "$out;$cp" 
 
 ## Configuración del correo
 
-La cuenta que envía las credenciales **no está en el código**. Se configura en `C:\ElvisData\config.properties`, que se crea con una plantilla la primera vez. Los cambios se aplican en el siguiente envío, sin cerrar la aplicación.
+Las credenciales se envían desde un buzón de **Microsoft 365 / Office 365** (`smtp.office365.com`, puerto 587, STARTTLS con TLS 1.2+). La cuenta **no está en el código**: se configura en `C:\ElvisData\config.properties`, que se crea con una plantilla la primera vez. Los cambios se aplican en el siguiente envío, sin cerrar la aplicación.
 
 ```properties
-# gmail | office365 | otro
-correo.proveedor=gmail
-correo.servidor=            # vacío = el del proveedor
-correo.puerto=587           # 465 = SSL; cualquier otro = STARTTLS
-correo.usuario=cuenta@dominio.com
+correo.usuario=buzon@dominio.edu.co
 correo.remitente=Servidor ELVIS - USC
 
-# clave  = usuario y contraseña
-# oauth2 = solo Office 365, con una aplicación registrada en Entra ID
+# clave  = usuario y contraseña del buzón
+# oauth2 = aplicación registrada en Entra ID
 correo.autenticacion=clave
-correo.clave=
+correo.clave=<contraseña del buzón>
 
-# Solo para office365 + oauth2
+# Solo para oauth2
 correo.oauth.tenant=
 correo.oauth.cliente_id=
 correo.oauth.cliente_secreto=
 ```
 
-### Gmail
-
-1. Activar la **verificación en 2 pasos** en la cuenta de Google.
-2. Crear una **contraseña de aplicación** en <https://myaccount.google.com/apppasswords>.
-3. Poner en `correo.clave` el código de 16 letras, sin espacios. **No** sirve la contraseña normal de la cuenta.
-
-### Microsoft 365 / Office 365
-
-```properties
-correo.proveedor=office365
-correo.usuario=buzon@dominio.edu.co
-correo.autenticacion=clave
-correo.clave=<contraseña del buzón>
-```
+### Con usuario y contraseña
 
 Requiere que el buzón tenga activo **SMTP autenticado** (Centro de administración de Microsoft 365 → Usuarios → *buzón* → Correo → Administrar aplicaciones de correo electrónico).
 
-Microsoft está retirando el envío con usuario y contraseña. Si el servidor lo rechaza (`535 5.7.3` / `5.7.139`), usar **OAuth2**:
+### Con OAuth2
+
+Microsoft está retirando el envío con usuario y contraseña. Si la clave es correcta y aun así el servidor la rechaza (`535 5.7.3` / `5.7.139`), usar **OAuth2**:
 
 1. Registrar una aplicación en **Entra ID** y crear un **secreto de cliente**.
 2. Agregar el permiso de aplicación **`SMTP.SendAsApp`** (*Office 365 Exchange Online*) y otorgar consentimiento de administrador.
@@ -187,7 +172,7 @@ Microsoft está retirando el envío con usuario y contraseña. Si el servidor lo
    correo.oauth.cliente_secreto=<SECRETO>
    ```
 
-Si el envío falla, el mensaje en pantalla indica qué corregir (por ejemplo, *"usa una contraseña de aplicación"*).
+Si el envío falla, el mensaje en pantalla indica qué corregir (por ejemplo, *"revisa que correo.clave sea la clave vigente del buzón"*).
 
 > 🔒 `config.properties` contiene la clave del correo: no lo subas al repositorio ni lo compartas.
 
@@ -256,9 +241,8 @@ El proyecto sigue el patrón **MVC**: las vistas FXML, los controladores que ati
 | Síntoma | Causa y solución |
 |---|---|
 | `NoClassDefFoundError: javax/activation/DataHandler` al enviar | Falta `jar_files/javax.activation-1.2.0.jar` en el classpath. Actualizar el repositorio y hacer *Clean and Build*. |
-| `534 5.7.9 Application-specific password required` | Gmail con verificación en 2 pasos: usar una contraseña de aplicación. |
-| `535 5.7.8 Username and Password not accepted` | Gmail: la clave es incorrecta o es la contraseña normal de la cuenta. |
-| `535 5.7.3 Authentication unsuccessful` | Office 365: clave incorrecta, SMTP autenticado apagado en el buzón o autenticación básica bloqueada. Pasar a `oauth2`. |
+| `535 5.7.3 Authentication unsuccessful` | Clave incorrecta o vencida (revisar primero `correo.clave`), SMTP autenticado apagado en el buzón o autenticación básica bloqueada. En este último caso, pasar a `oauth2`. |
+| `5.7.139` / *basic authentication is disabled* | El tenant bloquea usuario y contraseña: pasar a `oauth2`. |
 | *"El correo todavía no está configurado"* | Completar `correo.usuario` y `correo.clave` (o los datos `correo.oauth.*`) en `config.properties`. |
 | *"No hay licencias libres en ese horario"* | Todas las licencias están ocupadas por otros cursos en esa franja. Cargar más licencias o mover el horario. |
 | Git no puede actualizar un `.jar` | La aplicación está abierta y tiene el archivo en uso. Cerrarla antes de `git pull`. |
