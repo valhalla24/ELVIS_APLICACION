@@ -1,3 +1,9 @@
 /ElvisAccountManager/build/
 /ElvisAccountManager/dist/
 /ElvisAccountManager/nbproject/private/
+
+# Datos locales con secretos (nunca al repositorio)
+elvis.key
+config.properties
+/pruebas/out/
+/pruebas/datos/

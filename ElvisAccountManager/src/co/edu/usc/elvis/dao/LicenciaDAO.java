@@ -1,6 +1,7 @@
 package co.edu.usc.elvis.dao;
 
 import co.edu.usc.elvis.model.Licencia;
+import co.edu.usc.elvis.util.CifradoUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,6 +13,8 @@ import java.util.List;
 /**
  * Consultas relacionadas con el estado de las licencias,
  * usadas principalmente para las estadisticas del panel de Inicio.
+ * La contraseña de cada licencia se guarda cifrada (CifradoUtil) y se
+ * entrega descifrada a quien la lee.
  */
 public class LicenciaDAO {
 
@@ -51,7 +54,7 @@ public class LicenciaDAO {
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, usuario);
-            ps.setString(2, contrasena);
+            ps.setString(2, CifradoUtil.cifrar(contrasena));
             ps.setString(3, ip);
             ps.executeUpdate();
         }
@@ -61,7 +64,7 @@ public class LicenciaDAO {
         String sql = "UPDATE licencia SET contrasena = ?, ip_asignada = ? WHERE usuario = ?";
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, contrasena);
+            ps.setString(1, CifradoUtil.cifrar(contrasena));
             ps.setString(2, ip);
             ps.setString(3, usuario);
             ps.executeUpdate();
@@ -78,7 +81,7 @@ public class LicenciaDAO {
                 Licencia l = new Licencia();
                 l.setId(rs.getInt("id"));
                 l.setUsuario(rs.getString("usuario"));
-                l.setContrasena(rs.getString("contrasena"));
+                l.setContrasena(CifradoUtil.descifrar(rs.getString("contrasena")));
                 l.setIpAsignada(rs.getString("ip_asignada"));
                 l.setEstado(rs.getString("estado"));
                 licencias.add(l);
@@ -94,7 +97,7 @@ public class LicenciaDAO {
         try (Connection conn = ConexionBD.obtenerConexion();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, usuario);
-            ps.setString(2, contrasena);
+            ps.setString(2, CifradoUtil.cifrar(contrasena));
             ps.setString(3, ip);
             ps.setInt(4, id);
             ps.executeUpdate();

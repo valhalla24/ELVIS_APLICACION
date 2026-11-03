@@ -194,7 +194,7 @@ public class AsignacionDAO {
         d.setHoraFin(rs.getString("hora_fin"));
         d.setNotificado(rs.getInt("notificado") == 1);
         d.setLicenciaUsuario(rs.getString("licencia_usuario"));
-        d.setLicenciaContrasena(rs.getString("licencia_contrasena"));
+        d.setLicenciaContrasena(co.edu.usc.elvis.util.CifradoUtil.descifrar(rs.getString("licencia_contrasena")));
         d.setLicenciaIp(rs.getString("licencia_ip"));
         d.setCursoNombre(rs.getString("curso_nombre"));
         d.setCursoCodigo(rs.getString("curso_codigo"));

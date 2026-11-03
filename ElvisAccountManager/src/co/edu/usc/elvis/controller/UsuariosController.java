@@ -45,7 +45,7 @@ public class UsuariosController {
 
     private static final String ROL_TEXTO_PROFESOR = "Profesor";
     private static final String ROL_TEXTO_ADMIN = "Administrador";
-    private static final int LARGO_MINIMO_CONTRASENA = 6;
+    private static final int LARGO_MINIMO_CONTRASENA = co.edu.usc.elvis.util.SeguridadUtil.LARGO_MINIMO;
 
     private final UsuarioDAO usuarioDAO = new UsuarioDAO();
     private final CursoDAO cursoDAO = new CursoDAO();

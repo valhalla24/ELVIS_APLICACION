@@ -9,11 +9,13 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Properties;
 
 /**
- * Donde vive todo lo que NO debe quedar dentro del programa: la base de datos
- * y el archivo config.properties (con la cuenta de correo y su clave).
+ * Donde vive todo lo que NO debe quedar dentro del programa: la base de datos,
+ * el archivo config.properties (con la cuenta de correo y su clave cifrada) y
+ * la llave de cifrado elvis.key.
  *
  * La carpeta es, en este orden:
  *   1. la propiedad de Java  -Delvis.datos=RUTA
@@ -46,6 +48,68 @@ public final class Configuracion {
         return new File(carpetaDatos(), "config.properties");
     }
 
+    /**
+     * Llave de cifrado (ver CifradoUtil). Por defecto va junto a los datos;
+     * con -Delvis.llave=RUTA o ELVIS_LLAVE puede guardarse en otra carpeta con
+     * permisos mas estrictos.
+     */
+    // ponytail: llave junto a los datos protege copias sueltas de elvis.db / config.properties
+    // (respaldos, archivos enviados), no a quien lea toda la carpeta; para eso, moverla con elvis.llave o usar DPAPI.
+    public static File archivoLlave() {
+        String propiedad = System.getProperty("elvis.llave");
+        if (propiedad != null && !propiedad.trim().isEmpty()) {
+            return new File(propiedad.trim());
+        }
+        String entorno = System.getenv("ELVIS_LLAVE");
+        if (entorno != null && !entorno.trim().isEmpty()) {
+            return new File(entorno.trim());
+        }
+        return new File(carpetaDatos(), "elvis.key");
+    }
+
+    /** Claves de config.properties que se guardan cifradas. */
+    static final String[] CLAVES_SECRETAS = {"correo.clave", "correo.oauth.cliente_secreto"};
+
+    /** Igual que texto(), pero descifra el valor si esta cifrado. */
+    public static String secreto(Properties propiedades, String clave) {
+        return CifradoUtil.descifrar(texto(propiedades, clave, ""));
+    }
+
+    /**
+     * Si alguien escribio una clave en texto plano en config.properties, la
+     * reemplaza en el archivo por su version cifrada (el resto del archivo,
+     * comentarios incluidos, queda igual). Se llama al iniciar y antes de cada envio.
+     */
+    public static synchronized void protegerSecretos() {
+        File archivo = archivoConfiguracion();
+        if (!archivo.isFile()) {
+            return;
+        }
+        Properties propiedades = cargar();
+        try {
+            java.util.List<String> lineas = Files.readAllLines(archivo.toPath(), StandardCharsets.UTF_8);
+            boolean cambio = false;
+            for (int i = 0; i < lineas.size(); i++) {
+                String linea = lineas.get(i).trim();
+                for (String clave : CLAVES_SECRETAS) {
+                    if (linea.matches(java.util.regex.Pattern.quote(clave) + "\\s*[=:].*")) {
+                        String valor = texto(propiedades, clave, "");
+                        if (!valor.isEmpty() && !CifradoUtil.estaCifrado(valor)) {
+                            lineas.set(i, clave + "=" + CifradoUtil.cifrar(valor));
+                            cambio = true;
+                        }
+                    }
+                }
+            }
+            if (cambio) {
+                Files.write(archivo.toPath(), lineas, StandardCharsets.UTF_8);
+                System.out.println("Se cifraron las claves escritas en texto plano en " + archivo.getAbsolutePath());
+            }
+        } catch (IOException e) {
+            System.err.println("No se pudieron cifrar las claves de " + archivo + ": " + e.getMessage());
+        }
+    }
+
     /** Lee el archivo cada vez, asi los cambios se aplican sin cerrar el programa. */
     public static Properties cargar() {
         Properties propiedades = new Properties();
@@ -76,7 +140,9 @@ public final class Configuracion {
                 + "# Servidor ELVIS - configuración\n"
                 + "# Edita este archivo con el Bloc de notas. Los cambios del correo\n"
                 + "# se aplican en el siguiente envío (no hace falta cerrar el programa).\n"
-                + "# IMPORTANTE: aquí va la clave del correo; no compartas este archivo.\n"
+                + "# Escribe la clave tal cual: al abrir el programa (o al enviar) se\n"
+                + "# reemplaza sola por una versión cifrada que empieza por enc:v1:.\n"
+                + "# IMPORTANTE: no compartas este archivo ni el archivo elvis.key.\n"
                 + "# ============================================================\n"
                 + "\n"
                 + "# --- Correo que envía las credenciales a los estudiantes ---\n"
