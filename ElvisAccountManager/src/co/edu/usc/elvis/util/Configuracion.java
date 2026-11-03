@@ -80,13 +80,29 @@ public final class Configuracion {
                 + "# ============================================================\n"
                 + "\n"
                 + "# --- Correo que envía las credenciales a los estudiantes ---\n"
-                + "# Gmail: servidor smtp.gmail.com, puerto 587 y una \"contraseña de aplicación\"\n"
-                + "# (no la contraseña normal de la cuenta). Con puerto 465 se usa SSL.\n"
-                + "correo.servidor=smtp.gmail.com\n"
+                + "# correo.proveedor: gmail | office365 | otro\n"
+                + "#   gmail     -> correo.clave = \"contraseña de aplicación\" de Google (16 letras,\n"
+                + "#                sin espacios), NO la contraseña normal de la cuenta.\n"
+                + "#   office365 -> Microsoft ya casi no acepta usuario y clave: usa\n"
+                + "#                correo.autenticacion=oauth2 y completa los correo.oauth.*\n"
+                + "#   otro      -> escribe correo.servidor y correo.puerto (465 = SSL, otro = STARTTLS).\n"
+                + "# Si dejas correo.servidor vacío se usa el del proveedor.\n"
+                + "correo.proveedor=gmail\n"
+                + "correo.servidor=\n"
                 + "correo.puerto=587\n"
                 + "correo.usuario=\n"
+                + "correo.remitente=Servidor ELVIS - USC\n"
+                + "\n"
+                + "# clave = usuario y contraseña (Gmail, o Office 365 si el administrador lo permite)\n"
+                + "# oauth2 = solo Office 365, con una aplicación registrada en Entra ID\n"
+                + "correo.autenticacion=clave\n"
                 + "correo.clave=\n"
-                + "correo.remitente=Servidor ELVIS - USC\n";
+                + "\n"
+                + "# --- Solo para office365 + oauth2 ---\n"
+                + "# Id. de directorio (tenant), Id. de aplicación (cliente) y el secreto de cliente.\n"
+                + "correo.oauth.tenant=\n"
+                + "correo.oauth.cliente_id=\n"
+                + "correo.oauth.cliente_secreto=\n";
         try (Writer escritor = new OutputStreamWriter(new FileOutputStream(archivo), StandardCharsets.UTF_8)) {
             escritor.write(plantilla);
             System.out.println("Se creó el archivo de configuración: " + archivo.getAbsolutePath());
