@@ -15,9 +15,8 @@
     <VBox styleClass="tarjeta-login" alignment="CENTER" spacing="10"
           prefWidth="420" minWidth="420" maxWidth="420" maxHeight="-Infinity">
 
-        <ImageView fx:id="imagenLogo" fitHeight="84" preserveRatio="true" visible="false" managed="false"/>
+        <ImageView fx:id="imagenLogo" fitWidth="300" preserveRatio="true" visible="false" managed="false"/>
         <Label fx:id="textoLogo" text="🛡" styleClass="icono-grande"/>
-        <Label text="SERVIDOR ELVIS" styleClass="titulo-principal"/>
         <Label text="Universidad Santiago de Cali · DTSI" styleClass="subtitulo-rojo"/>
         <Label text="Iniciar sesión" styleClass="titulo-secundario">
             <VBox.margin><javafx.geometry.Insets top="12" bottom="4"/></VBox.margin>

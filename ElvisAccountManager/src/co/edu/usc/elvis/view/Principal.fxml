@@ -6,6 +6,8 @@
 <?import javafx.scene.control.MenuButton?>
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.SeparatorMenuItem?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
@@ -21,7 +23,9 @@
             <padding>
                 <Insets top="10" right="24" bottom="10" left="24"/>
             </padding>
-            <Text text="&#128737;" styleClass="icono-logo"/>
+            <ImageView fitHeight="34" preserveRatio="true" smooth="true">
+                <Image url="@icono.png"/>
+            </ImageView>
             <Text text="SERVIDOR ELVIS" styleClass="titulo-logo"/>
             <HBox HBox.hgrow="ALWAYS"/>
             <Button fx:id="botonInicio" text="Inicio" onAction="#mostrarInicio"
