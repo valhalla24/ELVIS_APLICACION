@@ -5,6 +5,7 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 public class App extends Application {
@@ -19,6 +20,8 @@ public class App extends Application {
                 getClass().getResource("/co/edu/usc/elvis/view/estilos.css").toExternalForm());
 
         stagePrincipal.setTitle("Servidor ELVIS - USC");
+        stagePrincipal.getIcons().add(new Image(
+                getClass().getResource("/co/edu/usc/elvis/view/icono.png").toExternalForm()));
         stagePrincipal.setMinWidth(1000);
         stagePrincipal.setMinHeight(650);
         stagePrincipal.setScene(escena);

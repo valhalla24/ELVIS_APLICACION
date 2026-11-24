@@ -31,7 +31,7 @@
                 <TextField fx:id="campoNombreUsuario" promptText="Ej. cvivas"/>
 
                 <Label text="Contraseña" styleClass="etiqueta-campo"/>
-                <PasswordField fx:id="campoContrasena" promptText="Mínimo 6 caracteres"/>
+                <PasswordField fx:id="campoContrasena" promptText="Mínimo 8 caracteres"/>
 
                 <Label text="Rol" styleClass="etiqueta-campo"/>
                 <ComboBox fx:id="comboRol" maxWidth="Infinity"/>

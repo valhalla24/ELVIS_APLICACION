@@ -5,6 +5,8 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.text.Text?>
 
 <BorderPane xmlns="http://javafx.com/javafx"
@@ -16,7 +18,7 @@
             <padding>
                 <Insets top="40" bottom="40"/>
             </padding>
-            <Text text="🛡" styleClass="icono-grande"/>
+            <ImageView fitHeight="110" preserveRatio="true" smooth="true"><Image url="@icono.png"/></ImageView>
             <Text text="SERVIDOR ELVIS" styleClass="titulo-principal"/>
             <Text text="UNIVERSIDAD SANTIAGO DE CALI • DTSI" styleClass="subtitulo-rojo"/>
             <Text text="Sistema de Asignación y Administración de Cuentas" styleClass="titulo-secundario"/>
